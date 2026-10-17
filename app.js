@@ -97,6 +97,7 @@ function updateQuickSuggestions(){
   ['页面倒序','把页面顺序倒过来'],
   ['提取最后一页','提取最后一页'],
   ['提取文字','提取文字'],
+  ['表格转 Excel','把 PDF 里的表格提取成 Excel'],
   ['扫描版 OCR','识别扫描 PDF 里的文字']
  ];
  else if(archiveExt.has(e))ideas=[
@@ -359,6 +360,9 @@ async function convertByWindows(plan,selected){
  }
  if(!detail&&plan.target==='csv'&&plan.source==='office'){
   detail='✓ CSV 已生成。注意：CSV 只能表达单个工作表的数据，原工作簿的其他工作表、公式和样式不会完整保留，请留存原文件。';
+ }
+ if(!detail&&plan.op==='pdf_tables_to_xlsx'){
+  detail='✓ 已生成可编辑 Excel。仅提取识别出的 PDF 表格，其他内容与原排版不保留；请核对金额、日期和行列。';
  }
  if(!detail&&plan.op==='pdf_to_docx'){
   detail='✓ 已生成可编辑 DOCX。PDF 反向重建可能改变图表、字体、表格及分页，请人工核对。';

@@ -23,7 +23,7 @@
   sheet:['pdf','xlsx','xls','ods','csv','png','jpg','webp'],
   slide:['pdf','pptx','ppt','odp','png','jpg','webp'],
   text:['pdf','html','txt','markdown','docx'],
-  pdf:['pdf','docx','png','jpg','webp','txt','markdown'],
+  pdf:['pdf','docx','xlsx','png','jpg','webp','txt','markdown'],
   archive:['zip','pdf','mp3'],
   xmind:['markdown','png','jpg','svg','pdf'],
   image:['jpg','png','webp','pdf','txt','markdown'],

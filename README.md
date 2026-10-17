@@ -75,3 +75,10 @@ Windows 完整版新增两个可确认的分类方案：“文档及图片→PDF
 手机独立离线版仍只支持 ZIP 安全解压和现有浏览器转换，不会假装能独立执行 Windows 多引擎批处理。
 
 **两种规则、逐文件验收记录和安全限制见 [v0.9 验收矩阵](FORMAT_SUPPORT_V09.md)**。本轮不包含 AI 智能规划。
+
+
+## v0.10 · 原生 XLSB 与 PDF 表格→Excel
+
+QLS、RTX3070 两台本地 Windows 电脑已用 Pandas 提供的真正 XLSB / XLS / ODS 测试文件验收转换。XLSB→PDF/XLSX/CSV、XLS→PDF、ODS→XLSX 均通过，但不能保证所有复杂公式、宏和图表无损。
+
+新增 PDF 表格→可编辑 XLSX：仅提取能辨识的表格，附有转换说明。扫描件、普通段落 PDF 或无可识别表格的文件会明确拒绝；不会自动重建非表格文字、图片、公式与原排版。详细样本、权限、限制见 [FORMAT_SUPPORT_V10.md](FORMAT_SUPPORT_V10.md)。手机独立离线版不具备 Python 表格引擎；需使用自己的 Windows 转换服务。

@@ -18,7 +18,7 @@
   office:{convert:['pdf','docx','doc','odt','rtf','txt','html','markdown','xlsx','xls','ods','csv','pptx','ppt','odp','png','jpg','webp'],pages:['pdf','png','jpg','webp']},
   text:{convert:['pdf','html','txt','markdown','docx']},
   archive:{convert:['pdf','mp3','zip']},
-  pdf:{convert:['docx','png','jpg','webp','txt','markdown'],pages:['pdf','png','jpg','webp','txt','markdown'],merge:['pdf']},
+  pdf:{convert:['docx','xlsx','png','jpg','webp','txt','markdown'],pages:['pdf','png','jpg','webp','txt','markdown'],merge:['pdf']},
   xmind:{convert:['markdown','png','jpg','svg','pdf']},
   image:{convert:['jpg','png','webp','pdf','txt','markdown'],merge:['pdf']},
   audio:{convert:['mp3','wav','m4a','ogg','flac']},
@@ -104,7 +104,9 @@
   const image=wantsImage(s);
   const text=wantsText(s);
   const compress=/压缩|缩小体积|减小体积|瘦身/.test(s);
-  const requested=parseTarget(s)||(type==='pdf'&&/(?:转|导出|保存|输出|变成|转为)[^。，,]{0,20}(?:word|Word|可编辑文档)/i.test(s)?'docx':null);
+  const requested=parseTarget(s)||
+    (type==='pdf'&&/(?:转|导出|保存|输出|变成|转为|提取)[^。，,]{0,22}(?:excel|电子表格)/i.test(s)?'xlsx':null)||
+    (type==='pdf'&&/(?:转|导出|保存|输出|变成|转为)[^。，,]{0,20}(?:word|Word|可编辑文档)/i.test(s)?'docx':null);
   let target=answer||requested;
   if(type==='archive'){
    if(selected.length!==1)return fail('一次请选择一份压缩包；内部文档会自动批量处理。');
@@ -181,7 +183,7 @@
     const options=registry.targets[family]||['pdf'];
     return chooser('选择办公文档格式','可选择同类 Office 格式或 PDF；转图片先排版为 PDF。',options,'pdf',{type});
    }
-   if(type==='pdf')return chooser('选择输出格式','可以转换为 DOCX、图片，或指定页面形成新的 PDF。',['docx','png','jpg','webp'],'png',{type});
+   if(type==='pdf')return chooser('选择输出格式','可以转换为 DOCX、提取表格到 XLSX、导出图片，或指定页形成 PDF。',['docx','xlsx','png','jpg','webp'],'png',{type});
    if(type==='image')return chooser('选择输出格式','你可以选择图片格式，或把图片排成 PDF。',['jpg','png','webp','pdf'],'jpg',{type});
    if(type==='video')return chooser('选择音视频格式','可以提取声音，或转换视频格式。',['mp3','wav','mp4','webm','gif'],'mp3',{type});
   }
@@ -197,10 +199,14 @@
    detail:explicitOCR?'使用本机 OCR 识别扫描 PDF 的文字；建议转换后校对数字与专有名词。':'优先提取 PDF 可复制文字；扫描版自动尝试离线 OCR。',
    browser:true,source:type,pages,fromEnd
   };
-  if(type==='pdf'&&target==='docx'){
-   if(pages.length||fromEnd)return fail('PDF → 可编辑 Word 当前需先提取指定页为 PDF，再单独转换成 DOCX。');
-   return {ok:true,op:'pdf_to_docx',target:'docx',title:'PDF → 可编辑 Word',
-     detail:'本机 pdf2docx 负责重建可编辑文档；图文混排、复杂表格和字体可能变化；无文字层扫描件需要先 OCR。',browser:false,source:type};
+  if(type==='pdf'&&['docx','xlsx'].includes(target)){
+   if(pages.length||fromEnd)return fail('PDF → 可编辑 Office 当前需先提取指定页为 PDF，再单独转换。');
+   return {ok:true,op:target==='docx'?'pdf_to_docx':'pdf_tables_to_xlsx',target,
+     title:target==='docx'?'PDF → 可编辑 Word':'PDF 表格 → 可编辑 Excel',
+     detail:target==='docx'?
+       '本机 pdf2docx 重建可编辑 Word；复杂排版可能变化。':
+       '仅提取能检测到的 PDF 表格，保留行列与数据；不是全文档还原，其他正文、图片、公式不保留。未发现表格则明确拒绝。',
+     browser:false,source:type};
   }
   if(type==='pdf'&&(pages.length||fromEnd))return {ok:true,op:'pdf_pages',target,title:fromEnd?'提取 PDF 倒数第 '+fromEnd+' 页':'提取 PDF 第 '+pages.join('、')+' 页',detail:'只处理所选页，自动检查页码是否存在。',browser:true,source:type,pages,fromEnd};
   if(type==='office'&&target&&!registry.canConvert(ext(selected[0]),target))return fail('当前 '+ext(selected[0]).toUpperCase()+' 不能可靠转换为 '+target.toUpperCase()+'；请选择同一文档类别的格式或 PDF。');

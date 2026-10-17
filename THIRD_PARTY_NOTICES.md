@@ -30,3 +30,6 @@ GitHub Pages 静态版本不包含私人电脑的服务端代码、配对码、�
 - **LibreOffice**, MPL-2.0: https://www.libreoffice.org/ — reused as a separate, existing local office conversion process.
 
 Publishing this PWA's MIT JavaScript does not relicense the upstream tools or their executable binaries.
+
+- **openpyxl 3.1.5**，MIT：https://github.com/theorchard/openpyxl —— Windows PDF 表格转可编辑 XLSX 时使用。
+- **PyMuPDF 1.28.2** 的 AGPL-3.0 或商业许可证义务同样适用于 PDF 表格提取；静态 PWA 不附带本地 Python 运行时。

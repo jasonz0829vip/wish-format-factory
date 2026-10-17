@@ -28,7 +28,7 @@
    <div class="promptHead"><label for="wishInput">你的转换愿望</label><span class="promptHint">直接说人话就可以</span></div>
    <div class="promptBox"><textarea id="wishInput" rows="2" spellcheck="false" placeholder="例如：把第二页单独导出；或者把它转成图片"></textarea><div class="promptActions"><span id="intentBadge" class="intentBadge">等待你许愿…</span><span class="chars"><span id="charCount">0</span>/250</span></div></div>
    <div id="clarify" class="clarify" hidden><div class="clarifyTop"><span>✦ 需要你确认一下</span><span id="clarifyDesc"></span></div><label id="choiceLabel" for="formatChoice">输出格式</label><select id="formatChoice" aria-label="选择输出格式"><option value="">请选择</option></select></div>
-   <div class="suggestions"><span>试试看：</span><button type="button" data-idea="转成 PDF">转成 PDF</button><button type="button" data-idea="全部转成 JPG">图片转 JPG</button><button type="button" data-idea="从视频提取 MP3 音频">视频提取 MP3</button><button type="button" data-idea="把第六页单独导出">提取第六页</button><button type="button" data-idea="把思维导图转成图片">XMind 转图片</button><button type="button" data-idea="把这些 PDF 按顺序合并成一个">合并 PDF</button></div>
+   <div class="suggestions"><span>试试看：</span><button type="button" data-idea="转成 PDF">转成 PDF</button><button type="button" data-idea="全部转成 JPG">图片转 JPG</button><button type="button" data-idea="从视频提取 MP3 音频">视频提取 MP3</button><button type="button" data-idea="把第六页单独导出">提取第六页</button><button type="button" data-idea="把思维导图转成图片">XMind 转图片</button><button type="button" data-idea="把这些 PDF 按顺序合并成一个">合并 PDF</button><button type="button" data-idea="把 PDF 里的表格提取成 Excel">表格→Excel</button><button type="button" data-idea="识别扫描 PDF 里的文字">扫描 OCR</button></div>
    <div id="plan" class="plan" hidden><div class="planIcon">✓</div><div><strong id="planTitle">已识别</strong><p id="planDetail"></p></div></div>
    <button id="runBtn" class="primary" type="button"><span id="runText">开始转换</span><span id="runArrow">↗</span></button>
    <div class="underButton">不消耗 AI 额度 · 输出前检查格式 · 转换失败会说明原因</div>
@@ -37,7 +37,7 @@
   <div id="result" class="result" hidden role="status" aria-live="polite"></div>
   <section class="facts"><div><span>01</span><strong>电脑离线</strong><p>本机启动后不需要互联网。</p></div><div><span>02</span><strong>手机优先</strong><p>图片和 PDF 可在浏览器本机处理；Office 能力因设备而异。</p></div><div><span>03</span><strong>隐私可控</strong><p>浏览器转换不上传；调用 Windows 引擎时只发给你自己的电脑。</p></div></section>
  </main>
- <footer><span>WISH FACTORY / v0.9</span><span>成熟转换引擎 · 少量定制</span></footer>
+ <footer><span>WISH FACTORY / v0.10</span><span>成熟转换引擎 · 少量定制</span></footer>
 </div>
 <dialog id="helpDialog"><form method="dialog"><button class="close" aria-label="关闭">×</button><h2>如何使用</h2><p>1. 选择或拖入文件。2. 输入“转成 PDF”等愿望。3. 点击开始转换，下载结果。</p><p>图片和 PDF 合并通常直接在当前浏览器处理，无需互联网。音频优先尝试设备本地处理。Office 转 PDF 使用本机 Windows 上的 LibreOffice：Windows 完整版无需其他电脑在线；该服务仅允许本机访问，不对局域网或公网直接开放。</p><p>PDF 可在手机离线提取可复制文字并保存为 TXT 或 Markdown；扫描件需要 OCR，当前不会输出空文本冒充成功。</p><p>手机需要完整 Word/Excel/PPT 转换时，可在联网状态下通过 Tailscale 私有 HTTPS 使用自己 Windows 电脑的 LibreOffice 引擎。</p><p>iPhone：请在 Safari 打开 HTTPS 网址，等待“离线资源已就绪”，点底部分享 → 添加到主屏幕。安装后开启飞行模式，可尝试已支持的图片、PDF、XMind 和设备可解码的音频转换。iOS 可能清理长期不用的缓存，需要联网重新打开一次。</p><p>Word、Excel、PPT 转 PDF 依然需要你自己的 Windows 电脑运行 LibreOffice；iPhone 断网时不能完成这些操作。未验收的格式会明确提示，不会伪造结果。</p><p>Windows 完整版新增混合压缩包分类整理：明确选择“文档/图片转 PDF、音视频转 MP3”或“Word/PPT 转 PDF、Excel 转 CSV、图片转 WebP、音视频转 MP3”；无法转换的原件仍会保留并列入报告。</p><button class="primary dialogBtn">明白了</button></form></dialog>
 </body></html>
