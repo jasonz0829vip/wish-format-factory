@@ -59,5 +59,47 @@ async function extract(file,pages,basename,target='pdf',status){
   return {name:basename+'-图片页面.zip',blob:await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:3}})};
  }finally{await doc.destroy();}
 }
-window.WishPdf={countPages,extract};
+async function resolveRequestedPages(file,requested=[],fromEnd=null){
+ if(!fromEnd)return requested;
+ const count=await countPages(file);
+ const resolved=count-fromEnd+1;
+ if(resolved<1||!Number.isInteger(resolved))throw new Error('文件只有 '+count+' 页，无法提取倒数第 '+fromEnd+' 页。');
+ return [resolved];
+}
+async function modify(file,plan,basename,status){
+ if(!window.PDFLib)throw new Error('PDF 编辑组件未加载');
+ const source=await window.PDFLib.PDFDocument.load(await file.arrayBuffer());
+ const pageCount=source.getPageCount();
+ if(pageCount<1)throw new Error('PDF 没有页面');
+ const pages=plan.fromEnd?[pageCount-plan.fromEnd+1]:(plan.pages||[]);
+ if(pages.some(n=>!Number.isInteger(n)||n<1||n>pageCount))throw new Error('文件只有 '+pageCount+' 页，请检查页码。');
+ const whole=Array.from({length:pageCount},(_,i)=>i+1);
+ if(plan.op==='pdf_split'){
+  const choices=pages.length?pages:whole;
+  if(choices.length>100)throw new Error('一次最多拆分 100 页，请先选页码范围。');
+  if(!window.JSZip)throw new Error('ZIP 打包组件未加载');
+  const zip=new window.JSZip();
+  for(const [i,n] of choices.entries()){
+   if(status)status('拆分页面 '+(i+1)+'/'+choices.length+'（第 '+n+' 页）');
+   const part=await window.PDFLib.PDFDocument.create();
+   const [copy]=await part.copyPages(source,[n-1]);
+   part.addPage(copy);
+   zip.file(basename+'-第'+n+'页.pdf',await part.save());
+  }
+  return {name:basename+'-独立页面.zip',blob:await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:3}})};
+ }
+ let keep=[];
+ if(plan.op==='pdf_delete'){
+  if(!pages.length)throw new Error('没有指定要删除的页码。');
+  keep=whole.filter(n=>!pages.includes(n));
+  if(!keep.length)throw new Error('不能删除全部页面；可以使用“按页拆分”单独导出。');
+ }else if(plan.op==='pdf_reverse')keep=[...whole].reverse();
+ else throw new Error('不认识该 PDF 修改操作');
+ const result=await window.PDFLib.PDFDocument.create();
+ const copied=await result.copyPages(source,keep.map(n=>n-1));
+ copied.forEach(p=>result.addPage(p));
+ return {name:basename+(plan.op==='pdf_delete'?'-删除指定页':'-倒序排列')+'.pdf',
+   blob:new Blob([await result.save()],{type:'application/pdf'})};
+}
+window.WishPdf={countPages,extract,modify,resolveRequestedPages};
 })();

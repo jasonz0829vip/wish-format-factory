@@ -22,6 +22,25 @@ function addDownload(name,blob,detail) {
  lastUrl=URL.createObjectURL(blob);
  const box=showMessage('✓ 转换成功',detail||('已生成 '+name+'，点击下载保存到设备。'));
  const a=document.createElement('a');a.className='downloadLink';a.href=lastUrl;a.download=name;a.textContent='↓ 下载 '+name;box.append(a);
+ if(typeof File==='function'&&typeof navigator.canShare==='function'&&typeof navigator.share==='function'){
+  try{
+   const shareFile=new File([blob],name,{type:blob.type||'application/octet-stream'});
+   if(navigator.canShare({files:[shareFile]})){
+    const btn=document.createElement('button');btn.type='button';btn.className='downloadLink shareLink';
+    btn.textContent='↗ 分享／保存到“文件”';
+    btn.onclick=async()=>{
+     try{await navigator.share({files:[shareFile],title:name});}
+     catch(e){if(e.name!=='AbortError')showMessage('分享未完成','可直接点击上方下载链接，或在 Safari 预览页选择“分享 → 存储到文件”。',true);}
+    };
+    box.append(btn);
+   }
+  }catch(e){console.info('文件分享不可用，仍可直接下载');}
+ }
+ if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  const hint=document.createElement('p');hint.className='iosSaveHint';
+  hint.textContent='iPhone 提示：可使用“分享 → 存储到文件”；如果只看到预览，请点 Safari 分享按钮。';
+  box.append(hint);
+ }
 }
 function errorMessage(e){const s=String(e&&e.message||e||'转换失败');return s.length>240?s.slice(0,240)+'…':s;}
 function updateFiles(next) {
@@ -36,9 +55,58 @@ function updateFiles(next) {
   const x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','移除 '+f.name);x.onclick=()=>updateFiles(files.filter((_,j)=>j!==i));
   row.append(name,size,x);list.append(row);
  });
- updatePlan();
+ updateQuickSuggestions();updatePlan();
 }
 // 泛化的操作规划见 planner.js，执行层不再维护重复的关键词列表。
+function updateQuickSuggestions(){
+ const buttons=[...document.querySelectorAll('.suggestions button[data-idea]')];
+ const e=files.length?ext(files[0]):'',n=files.length;
+ let ideas=[
+  ['转成 PDF','转成 PDF'],['转成图片','转成图片'],
+  ['视频提取音频','从视频提取 MP3 音频'],['提取第六页','提取第六页']
+ ];
+ if(e==='pdf')ideas=n>=2?[
+  ['合并 PDF','把这些 PDF 合并成一份'],
+  ['逐页拆成 PDF','把 PDF 每页拆成独立文件'],
+  ['转成图片','把 PDF 转成图片']
+ ]:[
+  ['提取指定页','单独导出第六页'],
+  ['删除指定页','删除第六页'],
+  ['每页拆成 PDF','把 PDF 每页拆成独立文件'],
+  ['页面倒序','把页面顺序倒过来'],
+  ['提取最后一页','提取最后一页']
+ ];
+ else if(officeExt.has(e))ideas=[
+  ['转成 PDF','把这个文件转成 PDF'],
+  ['单独导出第二页','把第二页单独导出'],
+  ['提取最后一页','提取最后一页'],
+  ['转成图片','把这个文档转成图片']
+ ];
+ else if(e==='xmind')ideas=[
+  ['转成图片','把思维导图转成图片'],
+  ['导出大纲','转成 Markdown'],
+  ['转成 PDF','转成 PDF']
+ ];
+ else if(imageExt.has(e))ideas=[
+  ['转成图片','把图片转成其他图片格式'],
+  ['压缩图片','把图片压缩一些'],
+  ['图片转 PDF',n>1?'把这些图片合成一个 PDF':'把图片转成 PDF']
+ ];
+ else if(videoExt.has(e))ideas=[
+  ['提取音频','从视频提取 MP3 音频'],
+  ['视频转 GIF','把视频转成 GIF'],
+  ['视频压缩','把视频压缩成 MP4']
+ ];
+ else if(audioExt.has(e))ideas=[
+  ['转成 MP3','转成 MP3'],
+  ['转成 WAV','转成 WAV'],
+  ['转成 FLAC','转成 FLAC']
+ ];
+ buttons.forEach((b,i)=>{
+  const item=ideas[i];b.hidden=!item;
+  if(item){b.textContent=item[0];b.dataset.idea=item[1];}
+ });
+}
 function updatePlan(){
  byId('charCount').textContent=wish.value.length;
  const context=wish.value+'\n'+files.map(f=>f.name+'#'+f.size).join('|');
@@ -141,7 +209,12 @@ async function convertInBrowser(plan){
  const outputs=[];
  if(plan.op==='pdf_pages'||plan.op==='pdf_images'){
   if(!window.WishPdf)throw new Error('PDF 页面处理模块还没加载');
-  return await window.WishPdf.extract(files[0],plan.pages||[],basename(files[0]),plan.target,t=>progress(true,plan.title,t));
+  const selected=await window.WishPdf.resolveRequestedPages(files[0],plan.pages||[],plan.fromEnd);
+  return await window.WishPdf.extract(files[0],selected,basename(files[0]),plan.target,t=>progress(true,plan.title,t));
+ }
+ if(['pdf_split','pdf_delete','pdf_reverse'].includes(plan.op)){
+  if(files.length!==1)throw new Error('PDF 页面修改一次只能处理一个文件');
+  return await window.WishPdf.modify(files[0],plan,basename(files[0]),t=>progress(true,plan.title,t));
  }
  if(plan.op==='xmind'){
   if(!window.WishXMind)throw new Error('离线 XMind 解析模块还没加载');
@@ -244,7 +317,18 @@ async function doConvert(){
  }catch(e){progress(false);if(e.pair)showPair(plan);else showMessage('转换未完成',errorMessage(e),true);}
  finally{busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';}
 }
-input.onchange=()=>{const selected=[...input.files];updateFiles(selected);if(!wish.value.trim()&&selected.length){const type=ext(selected[0]);wish.value=officeExt.has(type)?'把这个文件转成 PDF':type==='xmind'?'把思维导图转成图片':imageExt.has(type)?'把图片转成 JPG':videoExt.has(type)?'从视频提取 MP3 音频':audioExt.has(type)?'转成 MP3':'';updatePlan();}};
+input.onchange=()=>{
+ const selected=[...input.files];updateFiles(selected);
+ if(!wish.value.trim()&&selected.length){
+  const type=ext(selected[0]);
+  wish.placeholder=officeExt.has(type)?'例如：把这份 Word 转成 PDF，或只导出第二页':
+    type==='xmind'?'例如：把思维导图转成图片或 Markdown 大纲':
+    imageExt.has(type)?'例如：把这张照片转成图片，请让我选择输出格式':
+    type==='pdf'?'例如：删除第六页，或把所有页面拆成独立 PDF':
+    videoExt.has(type)?'例如：提取声音、转换为 GIF 或压缩视频':
+    audioExt.has(type)?'例如：把这段音频转成 MP3':'告诉我希望怎么处理这个文件';
+ }
+};
 byId('formatChoice').onchange=e=>{
  const value=e.target.value;
  if(value.startsWith('page:')){
@@ -303,4 +387,4 @@ function configureOfflineInstall(){
  inspect();
 }
 configureOfflineInstall();
-updatePlan();
+updateQuickSuggestions();updatePlan();

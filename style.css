@@ -12,3 +12,4 @@
 .installGuide[hidden]{display:none}
 .installGuide button{border:none;background:transparent;color:#5e57ad;text-decoration:underline;font-size:12px;font-weight:650;padding:5px;white-space:normal;text-align:left}
 .installGuide button:hover{text-decoration:none}
+.shareLink{margin-left:9px;cursor:pointer;background:#e9e7fa;border-color:#dcd8f5;color:#5646a4}.iosSaveHint{color:#656c83;font-size:12px;margin-top:12px;line-height:1.6}@media(max-width:700px){.downloadLink{margin:5px 0;max-width:100%}.shareLink{margin-left:0;width:100%}}

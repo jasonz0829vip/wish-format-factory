@@ -78,8 +78,10 @@
   const types=[...new Set(selected.map(typeOfFile))];
   if(types.includes(null)||types.length!==1)return fail('请把同一类文件放在一批转换；不同类型可分别处理。');
   const type=types[0];
-  const pages=extractPages(s);
-  if(['office','pdf'].includes(type)&&pages.length===0&&/(?:取|拿|截|导|留|保留)/.test(s)){
+  const relativeMatch=s.match(/倒数第([0-9零〇一二两三四五六七八九十百]+)页/);
+  const fromEnd=/最后一页|末页/.test(s)?1:relativeMatch?parseNum(relativeMatch[1]):null;
+  const pages=fromEnd?[]:extractPages(s);
+  if(['office','pdf'].includes(type)&&pages.length===0&&!fromEnd&&/(?:取|拿|截|导|留|保留|删|去掉|移除)/.test(s)){
    const m=s.replace(/\s+/g,'').match(new RegExp('('+numChunk+')页'));
    const n=m?parseNum(m[1]):NaN;
    if(Number.isInteger(n)&&n>0&&n<=100){
@@ -89,18 +91,32 @@
    }
   }
   const merge=/合并|拼接|合成一份|汇总成一份|连成一份/.test(s);
+  if(type==='pdf'&&merge&&selected.length<2)return fail('合并 PDF 至少需要选择两份文件。');
   const image=wantsImage(s);
   const text=wantsText(s);
   const compress=/压缩|缩小体积|减小体积|瘦身/.test(s);
   const requested=parseTarget(s);
   let target=answer||requested;
+  const deleting=/删除|删掉|去掉|移除|剔除/.test(s);
+  const splitting=/逐页|每(?:一)?页(?:单独|独立|拆分|导出)?|拆成(?:独立|单独|一页一份|每页)|按页拆|分割|拆开|分别导出/.test(s);
+  const reversing=/倒序|反转(?:页面|页码|顺序)|页面顺序倒过来|页序倒过来/.test(s);
+  if(type==='pdf'&&(deleting||(splitting&&!image)||reversing)){
+   if(selected.length!==1)return fail('PDF 页面修改一次请选择一份文件。');
+   if(requested&&requested!=='pdf')return fail('删除、拆分、倒序操作目前输出 PDF；如需图片，请分两步执行。');
+   if(deleting){
+    if(!pages.length&&!fromEnd)return fail('请明确要删除哪些页，例如“删除第2页”或“删除第2到4页”。');
+    return {ok:true,op:'pdf_delete',target:'pdf',title:'PDF 删除指定页',detail:'从原 PDF 删除所选页，输出新的 PDF，不修改原文件。',browser:true,source:type,pages,fromEnd};
+   }
+   if(reversing)return {ok:true,op:'pdf_reverse',target:'pdf',title:'PDF 页面倒序',detail:'颠倒整个 PDF 的页面顺序，不修改原文件。',browser:true,source:type};
+   return {ok:true,op:'pdf_split',target:'pdf',title:pages.length?'所选页面分别导出 PDF':'PDF 按页拆分',detail:'每页生成独立 PDF，统一打包 ZIP；最多处理 100 页。',browser:true,source:type,pages,fromEnd};
+  }
   if(!target&&text&&type==='xmind')target='markdown';
   if(!target&&/提取(?:音频|声音|音轨)|只要声音|只保留音频/.test(s)&&['video','audio'].includes(type))target='mp3';
   if(!target&&compress&&type==='image')target='webp';
   if(!target&&compress&&type==='video')target='mp4';
   if(!target&&merge&&type==='pdf')target='pdf';
   if(!target&&merge&&type==='image')target='pdf';
-  if(!target&&pages.length&&!image)target='pdf';
+  if(!target&&(pages.length||fromEnd)&&!image)target='pdf';
   if(!target&&/(?:转|转换|变|导出|生成|保存|输出|提取)/.test(s)){
    if(image){
     if(['video','audio'].includes(type))return fail('音视频抽取静态帧还未通过验收；视频目前可以转换 GIF，或提取 MP3/WAV 音频。');
@@ -113,13 +129,13 @@
    if(type==='video')return chooser('选择音视频格式','可以提取声音，或转换视频格式。',['mp3','wav','mp4','webm','gif'],'mp3',{type});
   }
   if(!target)return fail('还没识别到可以执行的转换动作。请说要“转换”“合并”或“提取第几页”，并选目标格式。');
-  if(!cap[type]||!(cap[type].convert||[]).includes(target)&&!(pages.length&&(cap[type].pages||[]).includes(target))&&!(merge&&(cap[type].merge||[]).includes(target)))
+  if(!cap[type]||!(cap[type].convert||[]).includes(target)&&!((pages.length||fromEnd)&&(cap[type].pages||[]).includes(target))&&!(merge&&(cap[type].merge||[]).includes(target)))
    return fail('当前未支持 '+type.toUpperCase()+' → '+target.toUpperCase()+'；可选：'+(cap[type]?.convert||[]).map(x=>labels[x]||x).join('、')+'。');
   if((merge||pages.length)&&selected.length>1&&pages.length)return fail('指定页码时请先选一个文件，避免多个文件的页码混淆。');
   if(type==='pdf'&&selected.length>1&&!merge)return fail('批量转换多份 PDF 时，请先分别处理；若要合并，请输入“把这些 PDF 合并”。');
   if(merge&&type==='pdf'&&selected.length>1)return {ok:true,op:'merge_pdf',target:'pdf',title:'合并 '+selected.length+' 份 PDF',detail:'按上传顺序合并全部页面，本机浏览器执行。',browser:true,source:type};
-  if(type==='pdf'&&pages.length)return {ok:true,op:'pdf_pages',target,title:'提取 PDF 第 '+pages.join('、')+' 页',detail:'只处理所选页，自动检查页码是否存在。',browser:true,source:type,pages};
-  if(type==='office'&&pages.length)return {ok:true,op:'office_pages',target,title:'提取文档第 '+pages.join('、')+' 页',detail:'先用 Windows LibreOffice 排版生成 PDF，再提取页面'+(target==='pdf'?'。':'并转换为图片。')+'实际分页可能与 Microsoft Word 略有差异。',browser:false,source:type,pages};
+  if(type==='pdf'&&(pages.length||fromEnd))return {ok:true,op:'pdf_pages',target,title:fromEnd?'提取 PDF 倒数第 '+fromEnd+' 页':'提取 PDF 第 '+pages.join('、')+' 页',detail:'只处理所选页，自动检查页码是否存在。',browser:true,source:type,pages,fromEnd};
+  if(type==='office'&&(pages.length||fromEnd))return {ok:true,op:'office_pages',target,title:fromEnd?'提取文档倒数第 '+fromEnd+' 页':'提取文档第 '+pages.join('、')+' 页',detail:'先用 Windows LibreOffice 排版生成 PDF，再提取页面'+(target==='pdf'?'。':'并转换为图片。')+'实际分页可能与 Microsoft Word 略有差异。',browser:false,source:type,pages,fromEnd};
   if(type==='office')return {ok:true,op:target==='pdf'?'office':'office_images',target,title:'办公文档 → '+target.toUpperCase(),detail:'由 Windows LibreOffice 转为 PDF'+(target==='pdf'?'。':'，再导出每页图片。'),browser:false,source:type};
   if(type==='pdf')return {ok:true,op:'pdf_images',target,title:'PDF → '+target.toUpperCase(),detail:'在本机浏览器逐页转换，批量输出 ZIP。',browser:true,source:type};
   if(type==='xmind')return {ok:true,op:'xmind',target,title:'XMind → '+target.toUpperCase(),detail:'读取 XMind 原始主题结构，导出为图片、PDF 或 Markdown。原始排版和主题样式可能不同。',browser:true,source:type};

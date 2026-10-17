@@ -1,6 +1,6 @@
 {
   "name": "wish-format-factory",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Offline-first file conversion PWA with Chinese natural language planning",
   "main": "app.js",
   "scripts": {
