@@ -2,6 +2,7 @@ node_modules/
 *.log
 .env*
 test-*.cjs
+test-*.mp4
 *.tmp
 pair-key.txt
 server.cjs

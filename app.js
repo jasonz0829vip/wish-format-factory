@@ -207,7 +207,7 @@ async function doConvert(){
   try{
    const code=localStorage.getItem('wish_pair')||'';
    const headers={'content-type':'application/json'};if(code)headers['x-wish-key']=code;
-   const resp=await fetch(new URL('api/interpret',document.baseURI),{method:'POST',headers,body:JSON.stringify({wish:wish.value,extension:ext(files[0])})});
+   const resp=await fetch(new URL('api/interpret',document.baseURI),{method:'POST',headers,body:JSON.stringify({wish:wish.value,extension:ext(files[0])}),signal:AbortSignal.timeout(20000)});
    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err.error||'无法调用本地语言模型');}
    const data=await resp.json();const understood=String(data.normalized||'').trim();
    if(understood){

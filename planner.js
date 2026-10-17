@@ -70,7 +70,9 @@
   return {ok:false,needsChoice:true,title,reason,options:options.map(v=>({value:v,label:labels[v]||v})),recommended,...extra};
  }
  function parse(command,selected,answer){
-  const s=String(command||'').trim();if(!selected.length)return fail('请先选文件。');
+  // Page noun normalization shared across Office/PDF commands. Models may say “第二张纸” instead of “第二页”.
+  const s=String(command||'').trim().replace(/第([0-9零〇一二两三四五六七八九十百]+)张(?:纸|页面)?/g,'第$1页');
+  if(!selected.length)return fail('请先选文件。');
   if(!s)return fail('告诉我想做什么，例如：“只导出第六页”或“转换成图片”。');
   if(s.length>250)return fail('请用 250 字以内描述需求。');
   const types=[...new Set(selected.map(typeOfFile))];
