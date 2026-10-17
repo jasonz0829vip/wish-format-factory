@@ -1,0 +1,25 @@
+{
+  "name": "许愿格式工厂",
+  "short_name": "许愿转换",
+  "description": "离线许愿，直接完成图片、PDF、XMind 和音频转换",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f6f1",
+  "theme_color": "#5c54b0",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.env*
+test-*.cjs
+*.tmp
+pair-key.txt
+server.cjs
+*.gguf
+*.zip
+.DS_Store
