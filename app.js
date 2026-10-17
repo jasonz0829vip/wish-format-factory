@@ -52,10 +52,16 @@ function updatePlan(){
   select.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent='请选择输出格式';select.append(empty);
   for(const item of plan.options){const opt=document.createElement('option');opt.value=item.value;opt.textContent=item.label+(item.value===plan.recommended?' · 推荐':'');select.append(opt);}
   select.value=choiceTarget;setStatus('还需确认：请选择输出格式',false);
+  if(!busy){runBtn.disabled=false;byId('runText').textContent='开始转换';}
  }else if(plan.ok){
-  byId('planTitle').textContent=plan.title;byId('planDetail').textContent=plan.detail;
-  setStatus('✓ 已识别 '+plan.target.toUpperCase(),true);
- }else setStatus(files.length?plan.reason:'等待你许愿…',false);
+  const hostname=location.hostname.toLowerCase();
+  const hasLocalWindowsService=['localhost','127.0.0.1'].includes(hostname)||/^192\.168\./.test(hostname)||/^10\./.test(hostname)||/^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+  const requiresWindows=!plan.browser&&!hasLocalWindowsService;
+  byId('planTitle').textContent=plan.title;
+  byId('planDetail').textContent=plan.detail+(requiresWindows?' 当前是独立网页版，尚未连接 Windows 本地转换引擎；请在 Windows 版完成此操作。':'');
+  setStatus(requiresWindows?'需要 Windows 本地引擎':'✓ 已识别 '+plan.target.toUpperCase(),!requiresWindows);
+  if(!busy){runBtn.disabled=requiresWindows;byId('runText').textContent=requiresWindows?'仅支持 Windows 版':'开始转换';}
+ }else {setStatus(files.length?plan.reason:'等待你许愿…',false);if(!busy){runBtn.disabled=false;byId('runText').textContent='开始转换';}}
 }
 function progress(show,title,detail){byId('progress').hidden=!show;byId('progressTitle').textContent=title||'正在执行';byId('progressRate').textContent=show?'处理中':'';
  byId('progressDetail').textContent=detail||'';byId('progressFill').style.width=show?'62%':'0';}
