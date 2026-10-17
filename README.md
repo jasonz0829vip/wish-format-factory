@@ -40,7 +40,7 @@
 - 目前内置 73 种输入扩展名的分类表，覆盖 Word / Excel / PPT 的传统格式与 OOXML 格式、Markdown / TXT、PDF、XMind、图片及常见音视频。**识别扩展名不等于能够任意互转**，完整能力以实际转换器返回为准。
 - Windows 完整版：LibreOffice 负责办公文档转 PDF，FFmpeg 负责音视频，浏览器引擎负责 PDF、图片和 XMind；Markdown/TXT 可转 PDF、HTML 或纯文本。
 - 宏启用文档 DOCM / DOTM / XLSM / XLTM / PPTM / PPSM / POTM 会识别类型，但默认拒绝自动打开和转换。XLSB、部分旧格式与模板格式尚未通过真实原生文件的完整验收，不承诺无损。
-- DOCX、XLSX、PPTX → PDF 已用实际文件验证；MD、TXT → PDF/HTML 的实际内容也已抽检。PDF → 可编辑 Word 仍未支持。
+- DOCX、XLSX、PPTX → PDF 已用实际文件验证；MD、TXT → PDF/HTML 的实际内容也已抽检。PDF → 可编辑 Word 自 v0.8 起支持含可复制文字的 PDF，但复杂排版不能承诺无损。
 - MP4、MP3、MOV、M4V 等文件会被识别；Windows 上音视频转换依赖 FFmpeg 与原文件内真实存在的编码流。
 
 ### 上传压缩包
@@ -67,3 +67,11 @@
 - **不会改变 iPhone 独立离线版的 Office 限制**。静态浏览器依然不能在 iPhone 本机运行 LibreOffice / pdf2docx / Pandoc，只能依赖已有的安全 Windows 服务。
 
 完整测试方向、失真与数据丢失警告见 [FORMAT_SUPPORT_V08.md](FORMAT_SUPPORT_V08.md)。公开 GitHub 仓库只发布无私密数据的浏览器前端，不包含 Windows 后端密钥、用户样本、模型、Pandoc 及 Python 虚拟环境。
+
+## v0.9 Windows 混合压缩包分类转换（2026-10-18）
+
+Windows 完整版新增两个可确认的分类方案：“文档及图片→PDF；音视频→MP3”和“Word/PPT/文本→PDF；Excel→CSV；图片→WebP；音视频→MP3”。未知文件、已有 PDF、嵌套压缩包原样保留，失败的文件也保留并写入逐文件报告。QLS 与 RTX3070 都已用真实混合压缩包验证；伪造 XLSB、无音轨视频等失败场景不会丢失原件。
+
+手机独立离线版仍只支持 ZIP 安全解压和现有浏览器转换，不会假装能独立执行 Windows 多引擎批处理。
+
+**两种规则、逐文件验收记录和安全限制见 [v0.9 验收矩阵](FORMAT_SUPPORT_V09.md)**。本轮不包含 AI 智能规划。

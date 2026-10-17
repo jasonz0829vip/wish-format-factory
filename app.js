@@ -100,6 +100,7 @@ function updateQuickSuggestions(){
   ['扫描版 OCR','识别扫描 PDF 里的文字']
  ];
  else if(archiveExt.has(e))ideas=[
+  ['分类整理','按文件类型分类整理压缩包'],
   ['转换文档 PDF','把压缩包里能转换的文档批量转成 PDF，其他保留'],
   ['音视频转 MP3','把压缩包里的音视频转换成 MP3，其他保留'],
   ['解压查看','解压里面的文件']
@@ -312,7 +313,8 @@ async function convertByWindows(plan,selected){
  if(!isPrivate&&!viaPrivateTailnet)throw new Error('当前是手机独立版：该任务需要你自己的 Windows 电脑引擎。文件不会上传给互联网网站。');
  const fd=new FormData();
  selected.forEach(f=>fd.append('files',f,f.name));fd.append('target',plan.target);
- if(plan.op==='archive_convert'||plan.op==='archive_unpack')fd.append('mode',plan.op);
+ if(['archive_convert','archive_unpack','archive_mixed'].includes(plan.op))fd.append('mode',plan.op);
+ if(plan.op==='archive_mixed')fd.append('recipe',plan.recipe);
  const headers={};const code=localStorage.getItem('wish_pair')||'';
  if(code)headers['x-wish-key']=code;
  let response;
@@ -322,7 +324,7 @@ async function convertByWindows(plan,selected){
   const err=new Error('请先配对运行转换器的 Windows 电脑。');err.pair=true;throw err;
  }
  if(!response.ok){let reason='未知失败';try{reason=(await response.json()).error||reason;}catch(e){}throw new Error(reason);}
- const isArchive=plan.op==='archive_convert'||plan.op==='archive_unpack';
+ const isArchive=['archive_convert','archive_unpack','archive_mixed'].includes(plan.op);
  let name=isArchive?basename(selected[0])+'-处理结果.zip':
    selected.length>1?'批量转换结果.zip':basename(selected[0])+'.'+(plan.target==='markdown'?'md':plan.target);
  // Word with embedded images may return a ZIP holding Markdown plus media files.
@@ -345,7 +347,7 @@ async function convertByWindows(plan,selected){
   try{
    if(header){
     const r=JSON.parse(decodeURIComponent(header));
-    detail='压缩包包含 '+r.files+' 个文件；成功转换 '+r.converted+' 个，已是目标格式 '+r.already+
+    detail=(r.recipe==='balanced'?'规则：文档图片→PDF，音视频→MP3。':r.recipe==='data'?'规则：Word/PPT→PDF，Excel→CSV，图片→WebP，音视频→MP3。':'')+'压缩包包含 '+r.files+' 个文件；成功转换 '+r.converted+' 个，已是目标格式 '+r.already+
     ' 个，原样保留 '+r.retained+' 个，转换失败 '+r.failed+' 个。ZIP 内有完整转换报告，未转换的文件不会丢失。';
    }
   }catch(e){console.info('Compressed batch summary unavailable');}

@@ -108,6 +108,27 @@
   let target=answer||requested;
   if(type==='archive'){
    if(selected.length!==1)return fail('一次请选择一份压缩包；内部文档会自动批量处理。');
+   const mixIntent=/(?:按类型|按类别|按文件类型|分类整理|分类转换|混合整理|分别转换|分别处理|一键整理|各类分开)/.test(s)||
+     (/(?:Word|docx|文档|Excel|xlsx|表格|PPT|pptx)/i.test(s)&&/(?:音视频|音频|视频|mp3)/i.test(s)&&/pdf/i.test(s));
+   if(mixIntent){
+    const recipeOptions=[
+     {value:'recipe:balanced',label:'文档与图片→PDF；音视频→MP3；其他保留'},
+     {value:'recipe:data',label:'Word/PPT→PDF；Excel→CSV；图片→WebP；音视频→MP3'}
+    ];
+    const automaticData=/(?:excel|xlsx|表格)[^。，,；;]{0,14}csv/i.test(s)&&
+      /(?:图片|图像|照片)[^。，,；;]{0,14}webp/i.test(s);
+    const recipe=String(answer||'').startsWith('recipe:')?String(answer).slice(7):(automaticData?'data':null);
+    if(!recipe)return {ok:false,needsChoice:true,title:'选择混合文件处理规则',
+      reason:'按类别处理使用确定的规则，不会让 AI 猜测不同文件的输出格式。未匹配的文件始终保留原件。',
+      options:recipeOptions,recommended:'recipe:balanced'};
+    if(!['balanced','data'].includes(recipe))return fail('未知混合处理规则');
+    return {ok:true,op:'archive_mixed',target:'zip',recipe,
+      title:recipe==='balanced'?'分类整理：文档 PDF + 音视频 MP3':'分类整理：办公 PDF/CSV + 图片 WebP + 音视频 MP3',
+      detail:recipe==='balanced'?
+       '文档及图片转 PDF，音视频转 MP3，其余原样保留；生成 ZIP 和逐文件报告。':
+       'Word/PPT/文本转 PDF，Excel 转单工作表 CSV，图片转 WebP，音视频转 MP3；其余保留。',
+      source:type,browser:false};
+   }
    const isUnpack=/(?:解压|解开|拆包|查看里面|查看文件|看看里面|列出文件)/.test(s)&&!target;
    if(isUnpack)target='zip';
    if(!target)return chooser('选择压缩包处理方式','可解压并查看文件，也可以批量转换内部支持的文档，其他原样保留。',['pdf','mp3','zip'],'pdf',{type});
