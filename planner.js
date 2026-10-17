@@ -2,20 +2,29 @@
 (function(){
  'use strict';
  const ext=f=>String(f.name.split('.').pop()||'').toLowerCase();
- const group={office:new Set(['doc','docx','rtf','odt','txt','xls','xlsx','ods','csv','ppt','pptx','odp']),
-  pdf:new Set(['pdf']),xmind:new Set(['xmind']),
-  image:new Set(['png','jpg','jpeg','webp','heic','heif','bmp','gif','avif']),
-  audio:new Set(['mp3','wav','m4a','aac','flac','ogg','opus','wma']),
-  video:new Set(['mp4','mov','avi','webm','mkv','wmv','m4v','mpeg','mpg'])};
+ const registry=window.WishFormats;
+ if(!registry)throw Error('格式注册表未加载：formats.js');
+ const group={
+  office:new Set([...registry.groups.word,...registry.groups.sheet,...registry.groups.slide]),
+  text:new Set(registry.groups.text),
+  archive:new Set(registry.groups.archive),
+  pdf:new Set(registry.groups.pdf),
+  xmind:new Set(registry.groups.xmind),
+  image:new Set(registry.groups.image),
+  audio:new Set(registry.groups.audio),
+  video:new Set(registry.groups.video)
+ };
  const cap={
   office:{convert:['pdf','png','jpg','webp'],pages:['pdf','png','jpg','webp']},
+  text:{convert:['pdf','html','txt','markdown']},
+  archive:{convert:['pdf','mp3','zip']},
   pdf:{convert:['png','jpg','webp','txt','markdown'],pages:['pdf','png','jpg','webp','txt','markdown'],merge:['pdf']},
   xmind:{convert:['markdown','png','jpg','svg','pdf']},
-  image:{convert:['jpg','png','webp','pdf'],merge:['pdf']},
+  image:{convert:['jpg','png','webp','pdf','txt','markdown'],merge:['pdf']},
   audio:{convert:['mp3','wav','m4a','ogg','flac']},
   video:{convert:['mp3','wav','m4a','ogg','flac','mp4','webm','gif']}
  };
- const labels={txt:'TXT（纯文本）',pdf:'PDF',png:'PNG（清晰，推荐文档）',jpg:'JPG（文件较小，推荐照片）',
+ const labels={zip:'ZIP（安全解包并列出文件）',html:'HTML 网页',txt:'TXT（纯文本）',pdf:'PDF',png:'PNG（清晰，推荐文档）',jpg:'JPG（文件较小，推荐照片）',
   webp:'WebP（体积小）',svg:'SVG（矢量图）',markdown:'Markdown（结构化文本）',
   mp3:'MP3',wav:'WAV（无损）',m4a:'M4A',ogg:'OGG',flac:'FLAC',mp4:'MP4',webm:'WebM',gif:'GIF'};
  const cn={'零':0,'〇':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
@@ -51,8 +60,8 @@
  function typeOfFile(f){const e=ext(f);return Object.keys(group).find(t=>group[t].has(e))||null;}
  function parseTarget(cmd){
   const normalized=cmd.toLowerCase();
-  const tokens=['markdown','docx','xlsx','pptx','webp','jpeg','jpg','png','pdf','svg','md','heic','mp3','wav','m4a','flac','ogg','mp4','webm','gif','zip','txt'];
-  const re=new RegExp('(?:转成?|转换成?|转为|导出(?:为|成)?|保存(?:为|成)?|生成|输出(?:为|成)?|变成|弄成|得到|提取成)\\s*(?:一张|一些|几张|高清|无损|一份|几份|[\\s、]*)\\s*('+tokens.join('|')+')(?![a-z0-9])','ig');
+  const tokens=['markdown','docx','xlsx','pptx','webp','jpeg','jpg','png','pdf','svg','md','heic','mp3','wav','m4a','flac','ogg','mp4','webm','gif','zip','txt','html'];
+  const re=new RegExp('(?:转成?|转换成?|转为|导出(?:为|成)?|保存(?:为|成)?|生成|输出(?:为|成)?|变成|弄成|得到|提取(?:成|为)?|识别(?:成|为)?)\\s*(?:一张|一些|几张|高清|无损|一份|几份|[\\s、]*)\\s*('+tokens.join('|')+')(?![a-z0-9])','ig');
   const ms=[...normalized.matchAll(re)];let target=ms.length?ms.at(-1)[1]:null;
   if(!target&&/(?:格式|类型)(?:为|是|设成?|指定为?)?\s*[:：]?\s*/.test(normalized)){
    const fmt=normalized.match(new RegExp('(?:格式|类型)[^a-z0-9]{0,6}('+tokens.join('|')+')','i'));if(fmt)target=fmt[1];
@@ -97,6 +106,26 @@
   const compress=/压缩|缩小体积|减小体积|瘦身/.test(s);
   const requested=parseTarget(s);
   let target=answer||requested;
+  if(type==='archive'){
+   if(selected.length!==1)return fail('一次请选择一份压缩包；内部文档会自动批量处理。');
+   const isUnpack=/(?:解压|解开|拆包|查看里面|查看文件|看看里面|列出文件)/.test(s)&&!target;
+   if(isUnpack)target='zip';
+   if(!target)return chooser('选择压缩包处理方式','可解压并查看文件，也可以批量转换内部支持的文档，其他原样保留。',['pdf','mp3','zip'],'pdf',{type});
+   if(!['pdf','mp3','zip'].includes(target))return fail('压缩包当前支持：内部文档转 PDF、音视频转 MP3、或安全解包。');
+   if(/第[0-9一二三四五六七八九十]+页/.test(s))return fail('压缩包包含多个文件，请先解压并选择具体文件，再指定页码。');
+   const unzip=target==='zip';
+   return {ok:true,op:unzip?'archive_unpack':'archive_convert',target,
+     title:unzip?'安全打开压缩包':'压缩包内批量转 '+target.toUpperCase(),
+     detail:unzip?'读取内部文件，可下载解压后的各项内容。':'自动逐项识别并转换支持的文件；不能转换的原件完整保留，最终 ZIP 附处理报告。',
+     source:type,browser:unzip&&ext(selected[0])==='zip'};
+  }
+  const textRequest=/(?:文字|文本|识别(?:文字|内容)|提取(?:内容|文字)|ocr)/i.test(s);
+  const explicitOCR=/(?:ocr|扫描件|扫描版|扫描文档|扫描\s*(?:pdf|文件)|照片中|照片里|图片中|图片里|识别文字|文字识别|识别扫描)/i.test(s);
+  if(['pdf','image'].includes(type)&&textRequest&&!target)return chooser(
+   '选择文字输出格式',
+   type==='pdf'?'会先提取 PDF 可复制文字，扫描页面再用离线 OCR 识别。首次 OCR 需联网下载中文＋英文模型。':'使用离线 OCR 识别图片文字，选择保存为 TXT 或 Markdown。',
+   ['txt','markdown'],'txt',{type,pages,fromEnd}
+  );
   const deleting=/删除|删掉|去掉|移除|剔除/.test(s);
   const splitting=/逐页|每(?:一)?页(?:单独|独立|拆分|导出)?|拆成(?:独立|单独|一页一份|每页)|按页拆|分割|拆开|分别导出/.test(s);
   const reversing=/倒序|反转(?:页面|页码|顺序)|页面顺序倒过来|页序倒过来/.test(s);
@@ -135,13 +164,25 @@
   if((merge||pages.length)&&selected.length>1&&pages.length)return fail('指定页码时请先选一个文件，避免多个文件的页码混淆。');
   if(type==='pdf'&&selected.length>1&&!merge)return fail('批量转换多份 PDF 时，请先分别处理；若要合并，请输入“把这些 PDF 合并”。');
   if(merge&&type==='pdf'&&selected.length>1)return {ok:true,op:'merge_pdf',target:'pdf',title:'合并 '+selected.length+' 份 PDF',detail:'按上传顺序合并全部页面，本机浏览器执行。',browser:true,source:type};
-  if(type==='pdf'&&['txt','markdown'].includes(target))return {ok:true,op:'pdf_text',target,title:'PDF → '+(target==='txt'?'TXT':'Markdown'),detail:'使用 PDF.js 离线提取可复制文字；扫描件需要 OCR。',browser:true,source:type,pages,fromEnd};
+  if(type==='pdf'&&['txt','markdown'].includes(target))return {
+   ok:true,op:explicitOCR?'pdf_ocr':'pdf_text',target,
+   title:explicitOCR?'PDF 扫描文字 OCR':'PDF → '+(target==='txt'?'TXT':'Markdown'),
+   detail:explicitOCR?'使用本机 OCR 识别扫描 PDF 的文字；建议转换后校对数字与专有名词。':'优先提取 PDF 可复制文字；扫描版自动尝试离线 OCR。',
+   browser:true,source:type,pages,fromEnd
+  };
   if(type==='pdf'&&(pages.length||fromEnd))return {ok:true,op:'pdf_pages',target,title:fromEnd?'提取 PDF 倒数第 '+fromEnd+' 页':'提取 PDF 第 '+pages.join('、')+' 页',detail:'只处理所选页，自动检查页码是否存在。',browser:true,source:type,pages,fromEnd};
   if(type==='office'&&(pages.length||fromEnd))return {ok:true,op:'office_pages',target,title:fromEnd?'提取文档倒数第 '+fromEnd+' 页':'提取文档第 '+pages.join('、')+' 页',detail:'先用 Windows LibreOffice 排版生成 PDF，再提取页面'+(target==='pdf'?'。':'并转换为图片。')+'实际分页可能与 Microsoft Word 略有差异。',browser:false,source:type,pages,fromEnd};
   if(type==='office')return {ok:true,op:target==='pdf'?'office':'office_images',target,title:'办公文档 → '+target.toUpperCase(),detail:'由 Windows LibreOffice 转为 PDF'+(target==='pdf'?'。':'，再导出每页图片。'),browser:false,source:type};
+  if(type==='text'){
+   if(!['pdf','html','txt','markdown'].includes(target))return fail('MD / TXT 文本暂支持导出 PDF、HTML、TXT、Markdown。');
+   return {ok:true,op:'text_convert',target,title:'文本文件 → '+target.toUpperCase(),detail:'本机转换 Markdown / TXT，不联网，不执行文档中的代码。',browser:false,source:type};
+  }
   if(type==='pdf')return {ok:true,op:'pdf_images',target,title:'PDF → '+target.toUpperCase(),detail:'在本机浏览器逐页转换，批量输出 ZIP。',browser:true,source:type};
   if(type==='xmind')return {ok:true,op:'xmind',target,title:'XMind → '+target.toUpperCase(),detail:'读取 XMind 原始主题结构，导出为图片、PDF 或 Markdown。原始排版和主题样式可能不同。',browser:true,source:type};
   if(type==='image'){
+   if(['txt','markdown'].includes(target))return {ok:true,op:'image_ocr',target,
+     title:'图片文字识别（OCR）',detail:'浏览器本机中文＋英文文字识别，首次加载离线模型约33MB，结果请校对。',
+     browser:true,source:type};
    if(target==='pdf')return {ok:true,op:'image_pdf',target,title:'图片 → PDF',detail:'在本机浏览器转换。',browser:true};
    let quality=.88;
    const q=s.match(/(?:质量|品质)\s*(\d{1,3})\s*%?/);if(q)quality=Math.min(1,Math.max(.1,Number(q[1])/100));

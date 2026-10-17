@@ -16,3 +16,8 @@
 项目打包入口在仓库根目录（`media-entry.mjs`、`xmind-entry.mjs`），依赖清单和锁文件均提供，可据此重建浏览器打包内容。请查看上述上游仓库获取相关许可证和完整组件源文件。MPL-2.0 所覆盖文件的原许可证仍保持有效。
 
 GitHub Pages 静态版本不包含私人电脑的服务端代码、配对码、测试用户文件或模型权重。
+
+- Tesseract.js 6.0.1 / tesseract.js-core (Apache-2.0), https://github.com/naptha/tesseract.js
+- Tesseract OCR / tessdata_fast English and Simplified Chinese models (Apache-2.0), https://github.com/tesseract-ocr/tessdata_fast
+- Windows-only archive converter uses locally installed 7-Zip (LGPL-2.1; RAR extraction subject to original 7-Zip/unRAR licensing): https://www.7-zip.org/
+- Windows-only Markdown conversion uses markdown-it 14.3.2 (MIT), https://github.com/markdown-it/markdown-it, and html-to-text 9.0.5 (MIT), https://github.com/html-to-text/node-html-to-text
