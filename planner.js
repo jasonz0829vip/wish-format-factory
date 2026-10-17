@@ -9,14 +9,14 @@
   video:new Set(['mp4','mov','avi','webm','mkv','wmv','m4v','mpeg','mpg'])};
  const cap={
   office:{convert:['pdf','png','jpg','webp'],pages:['pdf','png','jpg','webp']},
-  pdf:{convert:['png','jpg','webp'],pages:['pdf','png','jpg','webp'],merge:['pdf']},
+  pdf:{convert:['png','jpg','webp','txt','markdown'],pages:['pdf','png','jpg','webp','txt','markdown'],merge:['pdf']},
   xmind:{convert:['markdown','png','jpg','svg','pdf']},
   image:{convert:['jpg','png','webp','pdf'],merge:['pdf']},
   audio:{convert:['mp3','wav','m4a','ogg','flac']},
   video:{convert:['mp3','wav','m4a','ogg','flac','mp4','webm','gif']}
  };
- const labels={pdf:'PDF',png:'PNG（清晰，推荐文档）',jpg:'JPG（文件较小，推荐照片）',
-  webp:'WebP（体积小）',svg:'SVG（矢量图）',markdown:'Markdown（文字大纲）',
+ const labels={txt:'TXT（纯文本）',pdf:'PDF',png:'PNG（清晰，推荐文档）',jpg:'JPG（文件较小，推荐照片）',
+  webp:'WebP（体积小）',svg:'SVG（矢量图）',markdown:'Markdown（结构化文本）',
   mp3:'MP3',wav:'WAV（无损）',m4a:'M4A',ogg:'OGG',flac:'FLAC',mp4:'MP4',webm:'WebM',gif:'GIF'};
  const cn={'零':0,'〇':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
  function parseNum(s){
@@ -116,6 +116,7 @@
   if(!target&&compress&&type==='video')target='mp4';
   if(!target&&merge&&type==='pdf')target='pdf';
   if(!target&&merge&&type==='image')target='pdf';
+  if(type==='pdf'&&(!target||target==='pdf')&&/(文字|文本|提取(?:全部)?内容|markdown|txt)/i.test(s))return chooser('选择文字格式','PDF 可复制文字可导出为纯文本或 Markdown，扫描件需要 OCR。',['txt','markdown'],'txt',{type,pages,fromEnd});
   if(!target&&(pages.length||fromEnd)&&!image)target='pdf';
   if(!target&&/(?:转|转换|变|导出|生成|保存|输出|提取)/.test(s)){
    if(image){
@@ -134,6 +135,7 @@
   if((merge||pages.length)&&selected.length>1&&pages.length)return fail('指定页码时请先选一个文件，避免多个文件的页码混淆。');
   if(type==='pdf'&&selected.length>1&&!merge)return fail('批量转换多份 PDF 时，请先分别处理；若要合并，请输入“把这些 PDF 合并”。');
   if(merge&&type==='pdf'&&selected.length>1)return {ok:true,op:'merge_pdf',target:'pdf',title:'合并 '+selected.length+' 份 PDF',detail:'按上传顺序合并全部页面，本机浏览器执行。',browser:true,source:type};
+  if(type==='pdf'&&['txt','markdown'].includes(target))return {ok:true,op:'pdf_text',target,title:'PDF → '+(target==='txt'?'TXT':'Markdown'),detail:'使用 PDF.js 离线提取可复制文字；扫描件需要 OCR。',browser:true,source:type,pages,fromEnd};
   if(type==='pdf'&&(pages.length||fromEnd))return {ok:true,op:'pdf_pages',target,title:fromEnd?'提取 PDF 倒数第 '+fromEnd+' 页':'提取 PDF 第 '+pages.join('、')+' 页',detail:'只处理所选页，自动检查页码是否存在。',browser:true,source:type,pages,fromEnd};
   if(type==='office'&&(pages.length||fromEnd))return {ok:true,op:'office_pages',target,title:fromEnd?'提取文档倒数第 '+fromEnd+' 页':'提取文档第 '+pages.join('、')+' 页',detail:'先用 Windows LibreOffice 排版生成 PDF，再提取页面'+(target==='pdf'?'。':'并转换为图片。')+'实际分页可能与 Microsoft Word 略有差异。',browser:false,source:type,pages,fromEnd};
   if(type==='office')return {ok:true,op:target==='pdf'?'office':'office_images',target,title:'办公文档 → '+target.toUpperCase(),detail:'由 Windows LibreOffice 转为 PDF'+(target==='pdf'?'。':'，再导出每页图片。'),browser:false,source:type};

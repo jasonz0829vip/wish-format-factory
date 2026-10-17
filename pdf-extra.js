@@ -101,5 +101,45 @@ async function modify(file,plan,basename,status){
  return {name:basename+(plan.op==='pdf_delete'?'-删除指定页':'-倒序排列')+'.pdf',
    blob:new Blob([await result.save()],{type:'application/pdf'})};
 }
-window.WishPdf={countPages,extract,modify,resolveRequestedPages};
+
+async function extractText(file,requested=[],basename,target='txt',progress){
+ if(!['txt','markdown'].includes(target))throw new Error('文本导出目前支持 TXT / Markdown');
+ const mod=await pdfjs(),task=mod.getDocument({data:new Uint8Array(await file.arrayBuffer()),useSystemFonts:true,isEvalSupported:false});
+ const doc=await task.promise;
+ try{
+  const pages=requested&&requested.length?requested:Array.from({length:doc.numPages},(_,i)=>i+1);
+  if(pages.length>200)throw new Error('一次最多提取200页文本，请选定页码范围。');
+  if(pages.some(n=>!Number.isInteger(n)||n<1||n>doc.numPages))throw new Error('PDF 只有 '+doc.numPages+' 页，请检查页码。');
+  const all=[];
+  let extractedChars=0;
+  for(const [idx,n] of pages.entries()){
+   if(progress)progress('提取第 '+n+' 页文字（'+(idx+1)+'/'+pages.length+'）');
+   const page=await doc.getPage(n);
+   const result=await page.getTextContent({disableNormalization:false});
+   const chunks=[],items=(result.items||[]).filter(x=>typeof x.str==='string');
+   let lastY=null,lastEndX=null;
+   for(const item of items){
+    const str=item.str||'';
+    const x=item.transform?.[4]??null,y=item.transform?.[5]??null;
+    if(lastY!==null&&y!==null&&Math.abs(y-lastY)>Math.max(1.5,Math.abs(item.height||0)*.45))chunks.push('\n');
+    else if(chunks.length && !chunks.at(-1).endsWith('\n') && x!==null && lastEndX!==null && x-lastEndX>Math.max(4,(item.height||0)*.28))chunks.push(' ');
+    chunks.push(str);
+    if(item.hasEOL)chunks.push('\n');
+    lastY=y??lastY;
+    lastEndX=(x??0)+(item.width||0);
+   }
+   const text=chunks.join('').replace(/[\t ]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+   extractedChars+=text.length;
+   const heading=target==='markdown'?'## 第 '+n+' 页':'----- 第 '+n+' 页 -----';
+   all.push(heading+'\n\n'+(text||'[本页没有可复制的文字，可能是扫描件，需 OCR 才能识别]'));
+   page.cleanup();
+  }
+  if(!extractedChars)throw new Error('未发现可复制文字：这可能是扫描版 PDF。当前不具备离线 OCR 识别，不能假装提取成功。');
+  const payload=all.join('\n\n')+'\n';
+  const extension=target==='markdown'?'md':'txt';
+  return {name:basename+(pages.length===1?'-第'+pages[0]+'页':'-文本')+'.'+extension,
+          blob:new Blob([target==='txt'?'\uFEFF':'',payload],{type:'text/plain;charset=utf-8'})};
+ }finally{await doc.destroy();}
+}
+window.WishPdf={countPages,extract,extractText,modify,resolveRequestedPages};
 })();

@@ -74,7 +74,8 @@ function updateQuickSuggestions(){
   ['删除指定页','删除第六页'],
   ['每页拆成 PDF','把 PDF 每页拆成独立文件'],
   ['页面倒序','把页面顺序倒过来'],
-  ['提取最后一页','提取最后一页']
+  ['提取最后一页','提取最后一页'],
+  ['提取文字','提取文字']
  ];
  else if(officeExt.has(e))ideas=[
   ['转成 PDF','把这个文件转成 PDF'],
@@ -207,6 +208,10 @@ async function mergePdfs(selected){
 }
 async function convertInBrowser(plan){
  const outputs=[];
+ if(plan.op==='pdf_text'){
+  const selected=await window.WishPdf.resolveRequestedPages(files[0],plan.pages||[],plan.fromEnd);
+  return await window.WishPdf.extractText(files[0],selected,basename(files[0]),plan.target,t=>progress(true,plan.title,t));
+ }
  if(plan.op==='pdf_pages'||plan.op==='pdf_images'){
   if(!window.WishPdf)throw new Error('PDF 页面处理模块还没加载');
   const selected=await window.WishPdf.resolveRequestedPages(files[0],plan.pages||[],plan.fromEnd);
