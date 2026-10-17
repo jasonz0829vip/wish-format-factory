@@ -105,10 +105,17 @@ function updateQuickSuggestions(){
   ['解压查看','解压里面的文件']
  ];
  else if(textExt.has(e))ideas=[
-  ['转 PDF','把这个文本转成 PDF'],['转 HTML','把这个文本导出成 HTML'],['转 TXT','导出成 TXT'],['转 MD','导出成 Markdown']
+  ['转 PDF','把这个文本转成 PDF'],['转 HTML','把这个文本导出成 HTML'],['转 TXT','导出成 TXT'],['转 MD','导出成 Markdown'],
+  ...(e==='md'||e==='markdown'?[['转 Word','把这个 Markdown 转成 DOCX']]:[])
  ];
  else if(officeExt.has(e))ideas=[
-  ['转成 PDF','把这个文件转成 PDF'],
+  ['转 PDF','把这个文件转成 PDF'],
+  ['另存为其他格式','把这个文件转换成其他办公格式'],
+  window.WishFormats.category(e)==='word'?
+   ['转 Markdown','把这个 Word 转成 Markdown']:
+   window.WishFormats.category(e)==='sheet'?
+    ['转 CSV','把这个 Excel 导出成 CSV']:
+    ['转 ODP','把这个 PPT 转成 ODP'],
   ['单独导出第二页','把第二页单独导出'],
   ['提取最后一页','提取最后一页'],
   ['转成图片','把这个文档转成图片']
@@ -316,8 +323,22 @@ async function convertByWindows(plan,selected){
  }
  if(!response.ok){let reason='未知失败';try{reason=(await response.json()).error||reason;}catch(e){}throw new Error(reason);}
  const isArchive=plan.op==='archive_convert'||plan.op==='archive_unpack';
- const name=isArchive?basename(selected[0])+'-处理结果.zip':
+ let name=isArchive?basename(selected[0])+'-处理结果.zip':
    selected.length>1?'批量转换结果.zip':basename(selected[0])+'.'+(plan.target==='markdown'?'md':plan.target);
+ // Word with embedded images may return a ZIP holding Markdown plus media files.
+ // Always follow the server-confirmed output extension; never label ZIP bytes as .md.
+ const disposition=response.headers.get('content-disposition')||'';
+ const utf8=disposition.match(/filename[*][ \t]*=[ \t]*UTF-8''([^;]+)/i);
+ const fallback=disposition.match(/filename[ \t]*=[ \t]*"([^"]+)"/i);
+ if(utf8||fallback){
+  try{
+   const confirmed=utf8?decodeURIComponent(utf8[1]):fallback[1];
+   const actualExt=String(confirmed).split('.').pop().toLowerCase();
+   if(['zip','docx','odt','rtf','doc','txt','html','xlsx','xls','ods','csv','pptx','ppt','odp','md'].includes(actualExt)){
+    if(name.split('.').pop().toLowerCase()!==actualExt)name=basename(selected[0])+'.'+actualExt;
+   }
+  }catch(err){console.warn('File extension header unparseable');}
+ }
  let detail;
  if(isArchive){
   const header=response.headers.get('X-Wish-Archive-Counts');
@@ -328,6 +349,20 @@ async function convertByWindows(plan,selected){
     ' 个，原样保留 '+r.retained+' 个，转换失败 '+r.failed+' 个。ZIP 内有完整转换报告，未转换的文件不会丢失。';
    }
   }catch(e){console.info('Compressed batch summary unavailable');}
+ }
+ const warn=response.headers.get('X-Wish-Warning');
+ if(warn){
+  try{detail=(detail?detail+'\n':'')+'注意：'+decodeURIComponent(warn)}
+  catch(e){detail=(detail?detail+'\n':'')+'注意：此格式可能丢失部分布局、公式或样式。'}
+ }
+ if(!detail&&plan.target==='csv'&&plan.source==='office'){
+  detail='✓ CSV 已生成。注意：CSV 只能表达单个工作表的数据，原工作簿的其他工作表、公式和样式不会完整保留，请留存原文件。';
+ }
+ if(!detail&&plan.op==='pdf_to_docx'){
+  detail='✓ 已生成可编辑 DOCX。PDF 反向重建可能改变图表、字体、表格及分页，请人工核对。';
+ }
+ if(!detail&&name.toLowerCase().endsWith('.zip')&&['markdown','html'].includes(plan.target)){
+  detail='✓ 已完整打包：文档文字和伴随图片在同一个 ZIP 中，请一并解压使用，避免图片丢失。';
  }
  return {name,blob:await response.blob(),detail};
 }
@@ -344,7 +379,8 @@ async function convertOfficePipeline(plan){
  const officePdf=await convertByWindows({...plan,target:'pdf'},files);
  const doc=new File([officePdf.blob],basename(files[0])+'.pdf',{type:'application/pdf'});
  progress(true,'PDF 已生成，正在提取页面','由 LibreOffice 排版完成，接下来执行指定页码转换。');
- return await window.WishPdf.extract(doc,plan.pages||[],basename(files[0]),plan.target,t=>progress(true,plan.title,t));
+ const requested=await window.WishPdf.resolveRequestedPages(doc,plan.pages||[],plan.fromEnd);
+ return await window.WishPdf.extract(doc,requested,basename(files[0]),plan.target,t=>progress(true,plan.title,t));
 }
 async function doConvert(){
  if(busy)return;
@@ -352,7 +388,8 @@ async function doConvert(){
  if(!plan.ok&&plan.needsChoice){byId('formatChoice').focus();byId('clarify').scrollIntoView({behavior:'smooth',block:'center'});return;}
  const canUseOwnLocalAI = ['localhost','127.0.0.1'].includes(location.hostname)||/^192\.168\./.test(location.hostname)||/^10\./.test(location.hostname)||/^172\.(1[6-9]|2\d|3[01])\./.test(location.hostname);
  const viaPrivateTailnet=location.protocol==='https:'&&location.hostname.toLowerCase().endsWith('.ts.net');
- if(!plan.ok&&files.length&&wish.value.trim()&&(canUseOwnLocalAI||viaPrivateTailnet)){
+ const safetyFailure=!plan.ok&&!plan.needsChoice&&/不支持|不能可靠|宏|安全|不能自动处理|页码/.test(String(plan.reason||''));
+ if(!plan.ok&&!safetyFailure&&files.length&&wish.value.trim()&&(canUseOwnLocalAI||viaPrivateTailnet)){
   busy=true;runBtn.disabled=true;byId('runText').textContent='正在理解你的需求…';
   progress(true,'本地 AI 正在理解','本地模型首次唤醒可能需要一些时间。只发送中文指令及扩展名给本机模型，不发送文件内容，也不调用云端 AI。');
   try{
@@ -402,7 +439,7 @@ input.onchange=()=>{
     imageExt.has(type)?'例如：把这张照片转成图片，请让我选择输出格式':
     type==='pdf'?'例如：删除第六页，或把所有页面拆成独立 PDF':
     archiveExt.has(type)?'例如：把压缩包里的 Word、Excel、PPT 批量转成 PDF，其他文件保留':
-    textExt.has(type)?'例如：把这个 Markdown 转成 PDF，或导出 HTML':
+    textExt.has(type)?'例如：把这个 Markdown 转成 PDF、HTML、DOCX':
     videoExt.has(type)?'例如：提取声音、转换为 GIF 或压缩视频':
     audioExt.has(type)?'例如：把这段音频转成 MP3':'告诉我希望怎么处理这个文件';
  }

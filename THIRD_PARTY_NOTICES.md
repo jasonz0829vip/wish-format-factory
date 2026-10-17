@@ -21,3 +21,12 @@ GitHub Pages 静态版本不包含私人电脑的服务端代码、配对码、�
 - Tesseract OCR / tessdata_fast English and Simplified Chinese models (Apache-2.0), https://github.com/tesseract-ocr/tessdata_fast
 - Windows-only archive converter uses locally installed 7-Zip (LGPL-2.1; RAR extraction subject to original 7-Zip/unRAR licensing): https://www.7-zip.org/
 - Windows-only Markdown conversion uses markdown-it 14.3.2 (MIT), https://github.com/markdown-it/markdown-it, and html-to-text 9.0.5 (MIT), https://github.com/html-to-text/node-html-to-text
+
+## v0.8 Windows-only engine license reminder
+
+- **Pandoc 3.12.1**, GPL-2.0: https://github.com/jgm/pandoc — separately installed on the user's Windows computer; no binary is distributed in this static repository.
+- **pdf2docx 0.5.13**, MIT: https://github.com/ArtifexSoftware/pdf2docx — separately installed in an isolated Python environment.
+- **PyMuPDF 1.28.2**, AGPL-3.0 or commercial: https://github.com/pymupdf/PyMuPDF — dependency used by pdf2docx. Redistributing a combined Windows product or offering this as a network service requires a separate license/compliance review.
+- **LibreOffice**, MPL-2.0: https://www.libreoffice.org/ — reused as a separate, existing local office conversion process.
+
+Publishing this PWA's MIT JavaScript does not relicense the upstream tools or their executable binaries.

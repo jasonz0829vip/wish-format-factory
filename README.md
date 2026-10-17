@@ -55,3 +55,15 @@
 
 - 已在 Windows 的 Chromium/WebKit 浏览器自动识别中英文图片与扫描版 PDF。首次下载/缓存 Tesseract.js 与训练数据约 33MB 后再可离线使用。
 - OCR 识别结果请复核金额、专有名词和表格布局。扫描 PDF 单次最多 12 页，扫描文字不等于完整排版重建。
+## v0.8 Windows 完整版（2026-10-18）
+
+**优先修补转换链路，不包含 AI 智能规划升级。** QLS 和 RTX3070 的 Windows 后端现在新增：
+
+- LibreOffice 原生的 Word / Excel / PPT **同类别双向转换**。实际支持的输出组合由 `office-engine.cjs` 的白名单限制并检查输出文件结构。例：DOCX ↔ ODT、XLSX ↔ ODS、PPTX ↔ ODP；DOCX→DOC/RTF/TXT/HTML，XLSX→XLS/CSV，PPTX→PPT。
+- **PDF（含文字层）→可编辑 DOCX**：复用 Artifex pdf2docx + PyMuPDF，隔离于浏览器端，限制 25MB / 30 页；复杂排版、表格、图表与字体可能变化，不承诺无损。扫描件需先 OCR。
+- **Markdown ↔ Word**：复用 Pandoc 3.12.1；Word 带嵌入图片时输出 ZIP，包含 Markdown 和图片。Word→HTML 若产生伴随图片也一并打包，避免图片丢失。
+- **指定页纠错**：Word“最后一页、倒数第二页”现在会先转换为 PDF，再按实际页数解析并提取。
+- **真实文件校验**：除了后缀，检查 DOCX/XLSX/PPTX 内部结构；宏启用格式默认拒绝；XLSX 伪装成 XLSB 被拒绝。
+- **不会改变 iPhone 独立离线版的 Office 限制**。静态浏览器依然不能在 iPhone 本机运行 LibreOffice / pdf2docx / Pandoc，只能依赖已有的安全 Windows 服务。
+
+完整测试方向、失真与数据丢失警告见 [FORMAT_SUPPORT_V08.md](FORMAT_SUPPORT_V08.md)。公开 GitHub 仓库只发布无私密数据的浏览器前端，不包含 Windows 后端密钥、用户样本、模型、Pandoc 及 Python 虚拟环境。

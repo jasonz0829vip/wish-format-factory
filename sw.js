@@ -1,4 +1,4 @@
-const CACHE='wish-factory-static-v12';
+const CACHE='wish-factory-static-v13';
 const BASE=self.registration.scope;
 const ASSETS=['','style.css','app.js','formats.js','archive-browser.js','planner.js','pdf-extra.js','ocr.js','manifest.webmanifest','logo.svg','apple-touch-icon.png','pwa-192.png','pwa-512.png','vendor/jszip.min.js','vendor/pdf-lib.min.js','vendor/heic2any.min.js','vendor/media-bundle.js','vendor/xmind-bundle.js','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs'].map(x=>new URL(x,BASE).href);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
