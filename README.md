@@ -82,3 +82,12 @@ Windows 完整版新增两个可确认的分类方案：“文档及图片→PDF
 QLS、RTX3070 两台本地 Windows 电脑已用 Pandas 提供的真正 XLSB / XLS / ODS 测试文件验收转换。XLSB→PDF/XLSX/CSV、XLS→PDF、ODS→XLSX 均通过，但不能保证所有复杂公式、宏和图表无损。
 
 新增 PDF 表格→可编辑 XLSX：仅提取能辨识的表格，附有转换说明。扫描件、普通段落 PDF 或无可识别表格的文件会明确拒绝；不会自动重建非表格文字、图片、公式与原排版。详细样本、权限、限制见 [FORMAT_SUPPORT_V10.md](FORMAT_SUPPORT_V10.md)。手机独立离线版不具备 Python 表格引擎；需使用自己的 Windows 转换服务。
+
+
+## v0.10.1 转换安全与自动回归（2026-10-18）
+
+- Markdown「转成 Word」现在识别为 DOCX 输出；手机独立离线版仍不会伪装具备 Windows Office 引擎。
+- 不支持直接删除或合并 Word/Excel/PPT 原文件页面时明确拒绝，不再错误解释为提取。
+- PDF「删六页」会追问是第六页还是前六页，两个选择均通过真实页数和页序验收。
+- `npm test` 运行 30 条无网络、无模型加载的格式与指令回归检查。两台 Windows 完整版另外运行可重复的 Office、混合 ZIP 和 PDF 表格转换自检，报告分别保存在本机 `monitor/acceptance-latest.json`，仅保留最多 20 次简要历史记录。
+- 输入格式识别与转换保真不是同一回事；复杂排版、表格、宏格式和扫描件继续遵循已有安全限制。

@@ -1,10 +1,10 @@
 {
   "name": "wish-format-factory",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Offline-first file conversion PWA with Chinese natural language planning",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test checks/format-regression.cjs"
   },
   "keywords": [],
   "author": "",

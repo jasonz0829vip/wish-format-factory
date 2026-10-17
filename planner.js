@@ -87,6 +87,11 @@
   const types=[...new Set(selected.map(typeOfFile))];
   if(types.includes(null)||types.length!==1)return fail('请把同一类文件放在一批转换；不同类型可分别处理。');
   const type=types[0];
+  // Destructive Office requests must never fall through to extract-page execution.
+  if(type==='office'&&/(?:删除|删掉|去掉|移除|剔除|删(?=[第前0-9一二两三四五六七八九十百]))/.test(s))
+   return fail('当前不支持直接删除办公文档页面或幻灯片；为避免误操作，不能将“删除”理解为“提取”。可先转成 PDF 再删除指定页。');
+  if(type==='office'&&/(?:合并|拼接|合成一份|汇总成一份|连成一份)/.test(s))
+   return fail('当前不支持直接合并多份 Word、Excel 或 PPT；请先按需要转为 PDF，再合并 PDF。');
   const relativeMatch=s.match(/倒数第([0-9零〇一二两三四五六七八九十百]+)页/);
   const fromEnd=/最后一页|末页/.test(s)?1:relativeMatch?parseNum(relativeMatch[1]):null;
   const pages=fromEnd?[]:extractPages(s);
@@ -94,9 +99,10 @@
    const m=s.replace(/\s+/g,'').match(new RegExp('('+numChunk+')页'));
    const n=m?parseNum(m[1]):NaN;
    if(Number.isInteger(n)&&n>0&&n<=100){
+    const verb=/(?:删除|删掉|去掉|移除|剔除|删(?=[第前0-9一二两三四五六七八九十百]))/.test(s)?'删除':'提取';
     return {ok:false,needsChoice:true,kind:'page',title:'请确认页码',
       reason:'“'+m[1]+'页”不够明确：你指的是第'+n+'页，还是开头的'+n+'页？',
-      options:[{value:'page:one:'+n,label:'只提取第'+n+'页'},{value:'page:first:'+n,label:'提取前'+n+'页'}],recommended:'page:one:'+n};
+      options:[{value:'page:one:'+n,label:'只'+verb+'第'+n+'页'},{value:'page:first:'+n,label:verb+'前'+n+'页'}],recommended:'page:one:'+n};
    }
   }
   const merge=/合并|拼接|合成一份|汇总成一份|连成一份/.test(s);
@@ -106,7 +112,8 @@
   const compress=/压缩|缩小体积|减小体积|瘦身/.test(s);
   const requested=parseTarget(s)||
     (type==='pdf'&&/(?:转|导出|保存|输出|变成|转为|提取)[^。，,]{0,22}(?:excel|电子表格)/i.test(s)?'xlsx':null)||
-    (type==='pdf'&&/(?:转|导出|保存|输出|变成|转为)[^。，,]{0,20}(?:word|Word|可编辑文档)/i.test(s)?'docx':null);
+    (type==='pdf'&&/(?:转|导出|保存|输出|变成|转为)[^。，,]{0,20}(?:word|Word|可编辑文档)/i.test(s)?'docx':null)||
+    (type==='text'&&['md','markdown'].includes(ext(selected[0]))&&/(?:转|转换|导出|输出|保存|变成|转为)[^。，,]{0,20}(?:word|可编辑文档)/i.test(s)?'docx':null);
   let target=answer||requested;
   if(type==='archive'){
    if(selected.length!==1)return fail('一次请选择一份压缩包；内部文档会自动批量处理。');
@@ -149,7 +156,7 @@
    type==='pdf'?'会先提取 PDF 可复制文字，扫描页面再用离线 OCR 识别。首次 OCR 需联网下载中文＋英文模型。':'使用离线 OCR 识别图片文字，选择保存为 TXT 或 Markdown。',
    ['txt','markdown'],'txt',{type,pages,fromEnd}
   );
-  const deleting=/删除|删掉|去掉|移除|剔除/.test(s);
+  const deleting=/(?:删除|删掉|去掉|移除|剔除|删(?=[第前0-9一二两三四五六七八九十百]))/.test(s);
   const splitting=/逐页|每(?:一)?页(?:单独|独立|拆分|导出)?|拆成(?:独立|单独|一页一份|每页)|按页拆|分割|拆开|分别导出/.test(s);
   const reversing=/倒序|反转(?:页面|页码|顺序)|页面顺序倒过来|页序倒过来/.test(s);
   if(type==='pdf'&&(deleting||(splitting&&!image)||reversing)){
