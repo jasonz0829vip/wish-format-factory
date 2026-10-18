@@ -44,11 +44,13 @@ async function run(){
       const d=document.getElementById('pdfPreviewDialog').getBoundingClientRect();
       const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
       const toolbar=document.querySelector('.pdfPreviewToolbar');
-      return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth};
+      const footnote=document.getElementById('pdfPreviewFootnote').getBoundingClientRect();
+      return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-footnote.bottom)};
     });
     assert.ok(layout.modalRight<=layout.viewport+2,'PDF modal exceeds viewport');
     assert.ok(layout.closeRight<=layout.viewport+2,'PDF close button off-screen');
     assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'PDF toolbar overflows horizontally: '+JSON.stringify(layout));
+    assert.ok(layout.unusedBottom<40,'PDF mobile preview wastes bottom space: '+JSON.stringify(layout));
   }
   assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'PDF 页面预览');
   assert.equal(await page.locator('#pdfPreviewExtract').isVisible(),true);
