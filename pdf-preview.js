@@ -83,7 +83,7 @@
       const task = page.render({canvasContext: ctx, viewport, background: 'white'});
       renderTask = task;
       await task.promise;
-      if (renderToken === renderId && dialog.open) announce('PDF 在本机浏览器中预览，尚未修改原件。');
+      if (renderToken === renderId && dialog.open) announce(callbacks.readOnlyNote || 'PDF 在本机浏览器中预览，尚未修改原件。');
       if (renderTask === task) renderTask = null;
     } catch (error) {
       if (renderToken === renderId) announce('页面渲染失败：' + String(error.message || error).slice(0, 160), true);
