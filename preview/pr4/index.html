@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f6f1"><meta name="robots" content="noindex,nofollow"><meta name="description" content="本地运行的许愿格式工厂——选文件，说需求，一键转换">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./style.css"><title>许愿格式工厂 PR4 · 测试版</title>
+<script defer src="./vendor/jszip.min.js"></script><script defer src="./vendor/pdf-lib.min.js"></script>
+<script defer src="./vendor/heic2any.min.js"></script><script defer src="./vendor/media-bundle.js"></script><script defer src="./vendor/xmind-bundle.js"></script><script defer src="./formats.js"></script><script defer src="./archive-browser.js"></script><script defer src="./planner.js"></script><script defer src="./pdf-extra.js"></script><script defer src="./ocr.js"></script><script defer src="./pdf-preview.js"></script><script defer src="./app.js"></script></head>
+<body>
+<div class="shell">
+ <div class="draftNotice" role="status">🧪 PR #4 独立测试版 · 正式网站未更换 · 请使用非敏感文件测试</div>
+ <header class="topbar">
+  <div class="brand"><span class="brandmark">✦</span><span>许愿<span class="brandsoft">格式工厂</span></span></div>
+  <div class="topright"><span id="privacyTag" class="tag"><i class="dot"></i>本机优先 · 无云端上传</span><button id="helpBtn" class="help" type="button" aria-label="使用说明">?</button></div>
+ </header>
+ <main>
+  <div class="eyebrow"><span class="tinyshine">✧</span> 把麻烦交给工具，把话说清楚就行</div>
+  <h1>想把文件<span class="gradient">变成什么？</span></h1>
+  <p class="subtitle">选好文件，告诉我你的需求。我会识别格式、选择本地转换引擎，做好后直接交给你。</p>
+  <div id="installGuide" class="installGuide" hidden><span id="offlineStatus">正在检查手机离线资源…</span><button type="button" id="installHelp">如何添加到 iPhone 主屏幕？ <span aria-hidden="true">↗</span></button></div>
+  <section class="workspace" aria-label="转换工作区">
+   <label class="dropzone" id="dropZone" for="fileInput" tabindex="0">
+    <span class="uploadIcon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V3m0 0-4.5 4.5M12 3l4.5 4.5M4 15.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <strong>点击选择文件<span class="desktopHint">，或拖到这里</span></strong>
+    <small>Word · Excel · PPT · PDF · XMind · 图片 · 音视频</small>
+   </label>
+   <input id="fileInput" type="file" multiple hidden aria-label="选择需要转换的文件">
+   <div id="filesWrap" class="filesWrap" hidden><div class="smallHeading">已选择的文件 <span id="fileCount"></span></div><div id="fileList" class="fileList"></div></div>
+   <div class="promptHead"><label for="wishInput">你的转换愿望</label><span class="promptHint">直接说人话就可以</span></div>
+   <div class="promptBox"><textarea id="wishInput" rows="2" spellcheck="false" placeholder="例如：把第二页单独导出；或者把它转成图片"></textarea><div class="promptActions"><span id="intentBadge" class="intentBadge">等待你许愿…</span><span class="chars"><span id="charCount">0</span>/250</span></div></div>
+   <div id="clarify" class="clarify" hidden><div class="clarifyTop"><span>✦ 需要你确认一下</span><span id="clarifyDesc"></span></div><label id="choiceLabel" for="formatChoice">输出格式</label><select id="formatChoice" aria-label="选择输出格式"><option value="">请选择</option></select></div>
+   <div class="suggestions"><span>试试看：</span><button type="button" data-idea="转成 PDF">转成 PDF</button><button type="button" data-idea="全部转成 JPG">图片转 JPG</button><button type="button" data-idea="从视频提取 MP3 音频">视频提取 MP3</button><button type="button" data-idea="把第六页单独导出">提取第六页</button><button type="button" data-idea="把思维导图转成图片">XMind 转图片</button><button type="button" data-idea="把这些 PDF 按顺序合并成一个">合并 PDF</button><button type="button" data-idea="把 PDF 里的表格提取成 Excel">表格→Excel</button><button type="button" data-idea="识别扫描 PDF 里的文字">扫描 OCR</button></div>
+   <div id="plan" class="plan" hidden><div class="planIcon">✓</div><div><strong id="planTitle">已识别</strong><p id="planDetail"></p></div></div>
+   <button id="runBtn" class="primary" type="button"><span id="runText">开始转换</span><span id="runArrow">↗</span></button>
+   <div class="underButton">不消耗 AI 额度 · 输出前检查格式 · 转换失败会说明原因</div>
+  </section>
+  <div id="progress" class="progress" hidden><div class="progressTop"><span id="progressTitle">正在转换</span><span id="progressRate">…</span></div><div class="track"><div class="fill" id="progressFill"></div></div><div id="progressDetail" class="progressDetail"></div></div>
+  <div id="result" class="result" hidden role="status" aria-live="polite"></div>
+  <section class="facts"><div><span>01</span><strong>电脑离线</strong><p>本机启动后不需要互联网。</p></div><div><span>02</span><strong>手机优先</strong><p>图片和 PDF 可在浏览器本机处理；Office 能力因设备而异。</p></div><div><span>03</span><strong>隐私可控</strong><p>浏览器转换不上传；调用 Windows 引擎时只发给你自己的电脑。</p></div></section>
+ </main>
+ <footer><span>WISH FACTORY / v0.10.1</span><span>成熟转换引擎 · 少量定制</span></footer>
+</div>
+<dialog id="pdfPreviewDialog" class="pdfPreviewDialog" aria-label="PDF 页面预览">
+ <header class="pdfPreviewHeader"><div><strong id="pdfPreviewTitle">PDF 页面预览</strong><span id="pdfPreviewFilename"></span></div><button type="button" id="pdfPreviewClose" aria-label="关闭预览">×</button></header>
+ <nav class="pdfPreviewToolbar" aria-label="PDF 页面操作">
+  <button type="button" id="pdfPreviewPrevious">← 上一页</button><span id="pdfPreviewPage" aria-live="polite">正在打开…</span><button type="button" id="pdfPreviewNext">下一页 →</button>
+  <span class="pdfPreviewSeparator" aria-hidden="true"></span>
+  <button type="button" id="pdfPreviewZoomOut" aria-label="缩小 PDF">−</button><span id="pdfPreviewZoomValue">100%</span><button type="button" id="pdfPreviewZoomIn" aria-label="放大 PDF">+</button>
+  <span class="pdfPreviewSeparator" id="pdfPreviewActionSeparator" aria-hidden="true"></span>
+  <button type="button" id="pdfPreviewExtract">提取当前页</button><button type="button" id="pdfPreviewDelete" class="pdfPreviewDelete">删除当前页，另存</button>
+ </nav>
+ <div class="pdfPreviewStage"><canvas id="pdfPreviewCanvas" role="img" aria-label="当前文件页面的图像预览"></canvas></div>
+ <p id="pdfPreviewStatus" class="pdfPreviewStatus" role="status" aria-live="polite"></p>
+ <p class="pdfPreviewFootnote" id="pdfPreviewFootnote">提取或删除会另存新文件，不会覆盖原 PDF；不支持直接修改原文字。</p>
+</dialog>
+<dialog id="helpDialog"><form method="dialog"><button class="close" aria-label="关闭">×</button><h2>如何使用</h2><p>1. 选择或拖入文件。2. 输入“转成 PDF”等愿望。3. 点击开始转换，下载结果。</p><p>图片和 PDF 合并通常直接在当前浏览器处理，无需互联网。音频优先尝试设备本地处理。Office 转 PDF 使用本机 Windows 上的 LibreOffice：Windows 完整版无需其他电脑在线；该服务仅允许本机访问，不对局域网或公网直接开放。</p><p>PDF 可在手机离线提取可复制文字并保存为 TXT 或 Markdown；扫描件需要 OCR，当前不会输出空文本冒充成功。</p><p>手机需要完整 Word/Excel/PPT 转换时，可在联网状态下通过 Tailscale 私有 HTTPS 使用自己 Windows 电脑的 LibreOffice 引擎。</p><p>iPhone：请在 Safari 打开 HTTPS 网址，等待“离线资源已就绪”，点底部分享 → 添加到主屏幕。安装后开启飞行模式，可尝试已支持的图片、PDF、XMind 和设备可解码的音频转换。iOS 可能清理长期不用的缓存，需要联网重新打开一次。</p><p>Word、Excel、PPT 转 PDF 依然需要你自己的 Windows 电脑运行 LibreOffice；iPhone 断网时不能完成这些操作。未验收的格式会明确提示，不会伪造结果。</p><p>Windows 完整版新增混合压缩包分类整理：明确选择“文档/图片转 PDF、音视频转 MP3”或“Word/PPT 转 PDF、Excel 转 CSV、图片转 WebP、音视频转 MP3”；无法转换的原件仍会保留并列入报告。</p><button class="primary dialogBtn">明白了</button></form></dialog>
+</body></html>
