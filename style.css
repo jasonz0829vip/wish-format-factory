@@ -61,3 +61,8 @@
 .imageEditorFooter a{color:#5e55a6}
 .imageEditorFooter .primary{width:auto;padding:11px 20px;font-size:13px;white-space:nowrap}
 @media(max-width:680px){.imageEditorDialog{width:100vw;max-width:100vw;height:98vh;max-height:98vh;border-radius:0}.imageEditorHeader{padding:8px}.imageEditorFooter{padding:7px;gap:7px}.imageEditorFooter .primary{padding:10px}.imageEditorFooter span{max-width:60%;font-size:10px}}
+
+/* Office visual read-only preview: old files are never changed. */
+.officePreviewFileButton{padding:6px 10px;border:1px solid #cbd9e9;background:#f0f5ff;color:#325b95;border-radius:8px;font-size:12px;font-weight:700;flex-shrink:0}
+.officePreviewFileButton:disabled{cursor:wait;opacity:.65}
+.officePreviewFileButton:not(:disabled):hover,.officePreviewFileButton:focus-visible{background:#e1edff}
