@@ -8,7 +8,7 @@ let playwright;
 try{playwright=require('playwright');}catch(_){playwright=require('playwright-core');}
 const root=path.resolve(__dirname,'..');
 const mime={'.html':'text/html','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg'};
-let pdfFixture=null,badResponse=false,callCount=0,requestBodies=[];
+let pdfFixture=null,badResponse=false,delayMs=0,callCount=0,requestBodies=[];
 const server=http.createServer((req,res)=>{
  const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
  if(pathname==='/api/convert' && req.method==='POST'){
@@ -19,8 +19,12 @@ const server=http.createServer((req,res)=>{
        res.writeHead(422,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Expected PDF target'}));return;
      }
      const buf=badResponse?Buffer.from('NOT-PDF-FAIL'):pdfFixture;
-     res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="office-preview.pdf"'});
-     res.end(buf);
+     const send=()=>{
+       res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="office-preview.pdf"'});
+       res.end(buf);
+     };
+     if(delayMs) setTimeout(send,delayMs);
+     else send();
    });return;
  }
  const name=pathname==='/'?'/index.html':pathname,absolute=path.resolve(root,'.'+name);
@@ -76,6 +80,33 @@ async function main(){
   await page.locator('#fileInput').setInputFiles({name:'unsafe.docm',mimeType:'application/octet-stream',buffer:Buffer.from('macro')});
   assert.equal(await page.locator('.officePreviewFileButton').count(),0,'macro-enabled files must never expose preview');
   assert.equal(callCount,3,'macro file unexpectedly submitted');
+  // Large-file errors must be visible; they must not turn into unhandled promise rejections.
+  await page.evaluate(()=>{
+    const large=new File([new Uint8Array(25*1024*1024+1)],'过大文件.docx',{type:'application/octet-stream'});
+    updateFiles([large]);
+  });
+  await page.locator('.officePreviewFileButton').click();
+  await page.waitForFunction(()=>document.querySelector('#result h3')?.textContent==='Office 预览未完成');
+  assert.match(await page.locator('#result').textContent(),/25MB/);
+  assert.equal(callCount,3,'oversized file should never reach the backend');
+  assert.equal(await page.locator('.officePreviewFileButton').isEnabled(),true,'retry remains available');
+
+  // While the converter is busy, the selected input must stay stable.
+  delayMs=1150;
+  await page.locator('#fileInput').setInputFiles({name:'处理中原文.docx',mimeType:'application/octet-stream',buffer:Buffer.from('fixed-upload')});
+  await page.locator('.officePreviewFileButton').click();
+  await page.waitForFunction(()=>busy&&document.querySelector('.officePreviewFileButton')?.disabled===true);
+  await page.locator('#fileInput').setInputFiles({name:'恶意中途替换.xlsx',mimeType:'application/octet-stream',buffer:Buffer.from('changed-upload')});
+  assert.equal(await page.evaluate(()=>files[0].name),'处理中原文.docx','file list changed while preview was running');
+  assert.match(await page.locator('#intentBadge').textContent(),/正在处理当前文件/);
+  await page.waitForFunction(()=>document.getElementById('pdfPreviewDialog').open &&
+      document.getElementById('pdfPreviewStatus').textContent.includes('不能在此修改原'),null,{timeout:30000});
+  assert.equal(await page.evaluate(()=>files[0].name),'处理中原文.docx');
+  assert.equal(callCount,4,'exactly one request during delayed preview');
+  await page.locator('#pdfPreviewClose').click();
+  await page.locator('#pdfPreviewDialog').waitFor({state:'hidden'});
+  delayMs=0;
+
   badResponse=true;
   await page.locator('#fileInput').setInputFiles({name:'bad-server.docx',mimeType:'application/octet-stream',buffer:Buffer.from('sample')});
   await page.locator('.officePreviewFileButton').click();
@@ -83,7 +114,7 @@ async function main(){
   assert.match(await page.locator('#result').textContent(),/返回的不是 PDF/);
   assert.equal(await page.locator('#pdfPreviewDialog').getAttribute('open'),null);
   assert.deepEqual(pageErrors,[]);
-  console.log(JSON.stringify({status:'PASS',engines:'mocked PDF conversion route + genuine PDF.js renderer',officeTypes:extList,readOnly:true,sourceUnchanged:true,macroDenied:true,invalidBackendResponseRejected:true,apiCalls:callCount,browserErrors:pageErrors.length},null,2));
+  console.log(JSON.stringify({status:'PASS',oversizeRejected:true,inflightFileSwitchBlocked:true,engines:'mocked PDF conversion route + genuine PDF.js renderer',officeTypes:extList,readOnly:true,sourceUnchanged:true,macroDenied:true,invalidBackendResponseRejected:true,apiCalls:callCount,browserErrors:pageErrors.length},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(e=>{console.error('OFFICE PREVIEW E2E FAIL:',e.stack||e);process.exitCode=1;});
