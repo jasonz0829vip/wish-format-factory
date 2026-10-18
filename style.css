@@ -48,3 +48,8 @@
 .officePreviewFileButton{padding:6px 10px;border:1px solid #cbd9e9;background:#f0f5ff;color:#325b95;border-radius:8px;font-size:12px;font-weight:700;flex-shrink:0}
 .officePreviewFileButton:disabled{cursor:wait;opacity:.65}
 .officePreviewFileButton:not(:disabled):hover,.officePreviewFileButton:focus-visible{background:#e1edff}
+
+/* Processing has no reliable numeric progress API: use an honest indeterminate bar. */
+.fill.indeterminate{width:34%!important;transition:none;animation:wish-busy 1.45s ease-in-out infinite}
+@keyframes wish-busy{0%{transform:translateX(-105%)}50%{transform:translateX(108%)}100%{transform:translateX(310%)}}
+@media(prefers-reduced-motion:reduce){.fill.indeterminate{animation:none;width:100%!important;opacity:.55}}
