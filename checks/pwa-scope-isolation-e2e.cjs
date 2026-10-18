@@ -68,7 +68,8 @@ async function main(){
    const scope=new URL('./',document.baseURI).pathname;
    const key='wish-factory-'+encodeURIComponent(scope)+'-static-v20';
    const c=await caches.open(key);
-   return ['','app.js','pdf-preview.js','vendor/pdf.min.mjs'].every(Boolean)
+   return !!(await c.match(new URL('./',document.baseURI)))
+     && !!(await c.match(new URL('./app.js',document.baseURI)))
      && !!(await c.match(new URL('./pdf-preview.js',document.baseURI)))
      && !!(await c.match(new URL('./vendor/pdf.min.mjs',document.baseURI)));
   });
