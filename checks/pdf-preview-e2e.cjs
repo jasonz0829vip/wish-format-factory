@@ -134,7 +134,16 @@ async function run(){
              !!(await caches.match(new URL('./pdf-preview.js',document.baseURI)));
     });
     assert.ok(cacheReady,'PDF offline resources not cached');
-    await page.context().setOffline(true);
+    // On Linux WebKit, Playwright's context.setOffline can cause an internal
+    // navigation error. For WebKit simulate a real unreachable origin instead,
+    // while keeping Service Worker cache and same-origin requests intact.
+    if(webkit){
+      const stopped=new Promise((resolve,reject)=>server.close(err=>err?reject(err):resolve()));
+      server.closeAllConnections();
+      await stopped;
+    }else{
+      await page.context().setOffline(true);
+    }
     await page.reload({waitUntil:'domcontentloaded',timeout:25000});
     await page.locator('#fileInput').setInputFiles({name:'offline-three-pages.pdf',mimeType:'application/pdf',buffer:crafted});
     await page.locator('.pdfPreviewFileButton').click();
@@ -151,6 +160,6 @@ async function run(){
   const after=pdf?crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex'):null;
   if(pdf) assert.equal(after,before,'original PDF must remain unchanged');
   console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',damagedRejected:true,oversizedRejected:true,offlineMobilePreview,browserErrors:failures},null,2));
- }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+ }finally{if(browser)await browser.close();if(server.listening)await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error('E2E FAIL:',error.stack||error);server.close();process.exitCode=1;});

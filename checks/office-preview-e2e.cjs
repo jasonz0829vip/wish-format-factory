@@ -138,7 +138,16 @@ async function main(){
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:30000});
     assert.ok(await page.evaluate(async()=>!!(await caches.match(new URL('./app.js',document.baseURI)))));
-    await page.context().setOffline(true);
+    // On Linux WebKit, Playwright's context.setOffline can cause an internal
+    // navigation error. For WebKit simulate a real unreachable origin instead,
+    // while keeping Service Worker cache and same-origin requests intact.
+    if(webkit){
+      const stopped=new Promise((resolve,reject)=>server.close(err=>err?reject(err):resolve()));
+      server.closeAllConnections();
+      await stopped;
+    }else{
+      await page.context().setOffline(true);
+    }
     await page.reload({waitUntil:'domcontentloaded',timeout:25000});
     await page.locator('#fileInput').setInputFiles({name:'offline-office.docx',mimeType:'application/octet-stream',buffer:Buffer.from('document')});
     await page.locator('.officePreviewFileButton').click();
@@ -148,6 +157,6 @@ async function main(){
   }
   assert.deepEqual(pageErrors,[]);
   console.log(JSON.stringify({status:'PASS',oversizeRejected:true,inflightFileSwitchBlocked:true,engines:'mocked PDF conversion route + genuine PDF.js renderer',officeTypes:extList,readOnly:true,sourceUnchanged:true,macroDenied:true,invalidBackendResponseRejected:true,offlineMobileRefusal,apiCalls:callCount,browserErrors:pageErrors.length},null,2));
- }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+ }finally{if(browser)await browser.close();if(server.listening)await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(e=>{console.error('OFFICE PREVIEW E2E FAIL:',e.stack||e);process.exitCode=1;});
