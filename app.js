@@ -68,15 +68,18 @@ function errorMessage(e){const s=String(e&&e.message||e||'转换失败');return 
  * 只读预览不写回原 Office，不依赖第二套在线编辑器。
  */
 async function previewOfficeFile(file,button){
- if(!file||!officeExt.has(ext(file))||!window.WishFormats.canConvert(file.name,'pdf')){
-  throw new Error('此 Office 格式尚未通过安全预览检查');
- }
- if(!window.WishPdfPreview)throw new Error('本地 PDF 阅读组件没有加载');
- if(file.size>25*1024*1024)throw new Error('Office 预览目前限 25MB，请使用原有转换功能处理大文件');
+ if(busy){setStatus('当前任务正在处理，请稍后再试',false);return;}
+ busy=true;
  const oldLabel=button.textContent;
  button.disabled=true;
  button.textContent='正在生成预览…';
+ runBtn.disabled=true;
+ progress(true,'正在生成只读预览','使用已有 Windows LibreOffice 引擎，原文件不会被修改。');
  try{
+  if(!file||!officeExt.has(ext(file))||!window.WishFormats.canConvert(file.name,'pdf'))
+   throw new Error('此 Office 格式尚未通过安全预览检查');
+  if(!window.WishPdfPreview)throw new Error('本地 PDF 阅读组件没有加载');
+  if(file.size>25*1024*1024)throw new Error('Office 预览目前限 25MB，请先处理较小的文档');
   const rendered=await convertByWindows({target:'pdf',source:'office',op:'office_convert'},[file]);
   if(!rendered||!rendered.blob||rendered.blob.size<8)
    throw new Error('LibreOffice 未返回有效预览文件');
@@ -88,11 +91,19 @@ async function previewOfficeFile(file,button){
   if(e&&e.pair)showMessage('Office 预览需要配对','请先在 Windows 电脑打开 http://127.0.0.1:8790/api/pair，完成本地转换服务配对，再重试预览。',true);
   else showMessage('Office 预览未完成',errorMessage(e),true);
  }finally{
+  progress(false);
+  busy=false;
   button.textContent=oldLabel;
   button.disabled=false;
+  updatePlan();
  }
 }
 function updateFiles(next) {
+ if(busy){
+  input.value='';
+  setStatus('正在处理当前文件，完成后才能更换',false);
+  return false;
+ }
  const seen=new Map();for(const f of next)seen.set(f.name+'#'+f.size+'#'+f.lastModified,f);
  files=[...seen.values()].slice(0,20);
  input.value='';const wrap=byId('filesWrap'),list=byId('fileList');list.replaceChildren();
@@ -130,6 +141,7 @@ function updateFiles(next) {
   list.append(row);
  });
  updateQuickSuggestions();updatePlan();
+ return true;
 }
 // 泛化的操作规划见 planner.js，执行层不再维护重复的关键词列表。
 function updateQuickSuggestions(){
@@ -487,10 +499,10 @@ async function doConvert(){
   progress(false);
   addDownload(output.name,output.blob,output.detail||('✓ 已生成 '+output.name+'（'+units(output.blob.size)+'）。文件已经可以下载。'));
  }catch(e){progress(false);if(e.pair)showPair(plan);else showMessage('转换未完成',errorMessage(e),true);}
- finally{busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';}
+ finally{busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';updatePlan();}
 }
 input.onchange=()=>{
- const selected=[...input.files];updateFiles(selected);
+ const selected=[...input.files];if(!updateFiles(selected))return;
  if(!wish.value.trim()&&selected.length){
   const type=ext(selected[0]);
   wish.placeholder=officeExt.has(type)?'例如：把这份 Word 转成 PDF，或只导出第二页':
