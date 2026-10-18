@@ -74,9 +74,29 @@ async function main(){
      && !!(await c.match(new URL('./vendor/pdf.min.mjs',document.baseURI)));
   });
   assert.ok(ready,'draft own cache not ready');
+  // OCR is lazy-loaded: prove a real vendored worker is cached after its first
+  // request, and remains available with the network completely disabled.
+  const firstOCR=await draft.evaluate(async()=>{
+   const resp=await fetch(new URL('./vendor/ocr/worker.min.js',document.baseURI));
+   return {status:resp.status,bytes:(await resp.arrayBuffer()).byteLength};
+  });
+  assert.equal(firstOCR.status,200);
+  assert.ok(firstOCR.bytes>10000,'OCR worker returned an invalid resource');
+  await draft.waitForFunction(async()=>{
+   const scope=new URL('./',document.baseURI).pathname;
+   const key='wish-factory-'+encodeURIComponent(scope)+'-static-v20';
+   const cache=await caches.open(key);
+   return !!(await cache.match(new URL('./vendor/ocr/worker.min.js',document.baseURI)));
+  },null,{timeout:20000});
   await context.setOffline(true);
   await draft.reload({waitUntil:'domcontentloaded',timeout:30000});
   await production.reload({waitUntil:'domcontentloaded',timeout:30000});
+  const cachedOCR=await draft.evaluate(async()=>{
+   const r=await fetch(new URL('./vendor/ocr/worker.min.js',document.baseURI));
+   return {status:r.status,bytes:(await r.arrayBuffer()).byteLength};
+  });
+  assert.equal(cachedOCR.status,200,'offline OCR worker request failed');
+  assert.equal(cachedOCR.bytes,firstOCR.bytes,'offline OCR asset differs from initial fetch');
   assert.ok(await draft.evaluate(()=>!!window.WishPdfPreview),'draft offline PDF preview unavailable');
   assert.ok(await production.evaluate(()=>!!window.WishPdfPreview),'production-path offline PDF preview unavailable');
   keys=await draft.evaluate(()=>caches.keys());
@@ -86,6 +106,7 @@ async function main(){
    status:'PASS',realServiceWorkers:2,sharedOrigin:true,
    isolatedCaches:true,productionCachePreserved:true,
    previewOldCacheRemoved:true,otherAppCachePreserved:true,
+   lazilyCachedOCRWorksOffline:true,
    productionOfflineReload:true,previewOfflineReload:true,
    browserErrors:errors.length
   },null,2));
