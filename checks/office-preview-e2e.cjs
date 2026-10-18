@@ -70,11 +70,13 @@ async function main(){
         const d=document.getElementById('pdfPreviewDialog').getBoundingClientRect();
         const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
         const toolbar=document.querySelector('.pdfPreviewToolbar');
-        return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth};
+        const status=document.getElementById('pdfPreviewStatus').getBoundingClientRect();
+        return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-status.bottom)};
       });
       assert.ok(layout.modalRight<=layout.viewport+2,'Office modal exceeds mobile screen');
       assert.ok(layout.closeRight<=layout.viewport+2,'Office close button off-screen');
       assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'Office toolbar horizontal overflow: '+JSON.stringify(layout));
+      assert.ok(layout.unusedBottom<40,'Office mobile preview wastes bottom space: '+JSON.stringify(layout));
     }
     assert.equal(await page.locator('#pdfPreviewFilename').textContent(),'合同预览.'+ext);
     const onPage=await page.locator('#pdfPreviewPage').textContent();
