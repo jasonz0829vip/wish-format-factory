@@ -86,6 +86,9 @@ async function run(){
   assert.ok(details.bytes>100);
   // Damaged or oversized PDF must fail visibly without creating a corrupt download.
   await page.locator('#fileInput').setInputFiles({name:'damaged.pdf',mimeType:'application/pdf',buffer:Buffer.from('invalid pdf contents')});
+  // An old successful conversion must disappear immediately when another file is uploaded.
+  assert.equal(await page.locator('#result a.downloadLink').count(),0,'stale download from previous PDF');
+  assert.equal(await page.locator('#result').isHidden(),true);
   await page.locator('.pdfPreviewFileButton').click();
   await page.waitForFunction(()=>document.getElementById('pdfPreviewStatus').textContent.includes('无法预览此 PDF'),null,{timeout:20000});
   assert.equal(await page.locator('#pdfPreviewExtract').isDisabled(),true);
