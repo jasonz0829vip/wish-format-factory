@@ -74,7 +74,26 @@ function updateFiles(next) {
   const name=document.createElement('span');name.className='filename';name.title=f.name;name.textContent=f.name;
   const size=document.createElement('span');size.className='size';size.textContent=units(f.size);
   const x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','移除 '+f.name);x.onclick=()=>updateFiles(files.filter((_,j)=>j!==i));
-  row.append(name,size,x);list.append(row);
+  if(ext(f)==='pdf'){
+   const preview=document.createElement('button');preview.type='button';
+   preview.className='pdfPreviewFileButton';preview.textContent='预览 / 选页';
+   preview.setAttribute('aria-label','预览 '+f.name+' 并选择页面');
+   preview.onclick=()=>{
+    if(!window.WishPdfPreview){showMessage('预览不可用','本地 PDF 阅读组件未加载，请刷新后重试。',true);return;}
+    void window.WishPdfPreview.open(f,{
+     onDelete:async page=>{
+      const out=await window.WishPdf.modify(f,{op:'pdf_delete',pages:[page]},basename(f));
+      addDownload(out.name,out.blob,'✓ 已从 '+f.name+' 删除第 '+page+' 页，原件未改变。');
+     },
+     onExtract:async page=>{
+      const out=await window.WishPdf.extract(f,[page],basename(f),'pdf');
+      addDownload(out.name,out.blob,'✓ 已从 '+f.name+' 提取第 '+page+' 页，原件未改变。');
+     }
+    });
+   };
+   row.append(name,size,preview,x);
+  }else row.append(name,size,x);
+  list.append(row);
  });
  updateQuickSuggestions();updatePlan();
 }
