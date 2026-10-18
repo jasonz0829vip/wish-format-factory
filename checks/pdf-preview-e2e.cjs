@@ -23,7 +23,7 @@ async function run(){
   const options={headless:true,args:['--no-sandbox']};
   if(process.env.CHROME_PATH)options.executablePath=process.env.CHROME_PATH;
   browser=await playwright.chromium.launch(options);
-  const page=await browser.newPage({acceptDownloads:true,viewport:{width:1280,height:900}});
+  const page=await browser.newPage({acceptDownloads:true,viewport:process.env.QA_MOBILE==='1'?{width:390,height:844}:{width:1280,height:900}});
   const failures=[];page.on('pageerror',e=>failures.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
   if(pdf) await page.locator('#fileInput').setInputFiles(pdf);
@@ -39,6 +39,17 @@ async function run(){
   await page.getByRole('button',{name:/预览.*(选页|选择页面)/}).click();
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
+  if(process.env.QA_MOBILE==='1'){
+    const layout=await page.evaluate(()=>{
+      const d=document.getElementById('pdfPreviewDialog').getBoundingClientRect();
+      const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
+      const toolbar=document.querySelector('.pdfPreviewToolbar');
+      return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth};
+    });
+    assert.ok(layout.modalRight<=layout.viewport+2,'PDF modal exceeds viewport');
+    assert.ok(layout.closeRight<=layout.viewport+2,'PDF close button off-screen');
+    assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'PDF toolbar overflows horizontally: '+JSON.stringify(layout));
+  }
   assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'PDF 页面预览');
   assert.equal(await page.locator('#pdfPreviewExtract').isVisible(),true);
   assert.equal(await page.locator('#pdfPreviewDelete').isVisible(),true);
