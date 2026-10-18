@@ -14,7 +14,7 @@ const server=http.createServer((req,res)=>{
  if(pathname==='/api/convert' && req.method==='POST'){
    let chunks=[];
    req.on('data',v=>chunks.push(v));req.on('end',()=>{
-     const raw=Buffer.concat(chunks).toString('latin1');requestBodies.push(raw.slice(0,1600));callCount++;
+     const raw=Buffer.concat(chunks).toString('utf8');requestBodies.push(raw.slice(0,1600));callCount++;
      if(!/name="target"/.test(raw)||!/\r\npdf\r\n/.test(raw)){
        res.writeHead(422,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Expected PDF target'}));return;
      }
