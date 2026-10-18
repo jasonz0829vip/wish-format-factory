@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test-pdf-preview:
-    name: PDF regression + Chromium end-to-end
+    name: PDF/Office preview regression + Chromium end-to-end
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -50,11 +50,17 @@ jobs:
         run: node checks/pdf-preview-e2e.cjs
         env:
           PREVIEW_SCREENSHOT: pdf-preview-ci.png
+      - name: Office read-only preview (mocked existing Windows converter)
+        run: node checks/office-preview-e2e.cjs
+        env:
+          OFFICE_PREVIEW_SCREENSHOT: office-preview-ci.png
       - name: Preserve test screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pdf-preview-chromium-qa
-          path: pdf-preview-ci.png
+          path: |
+            pdf-preview-ci.png
+            office-preview-ci.png
           if-no-files-found: ignore
           retention-days: 7
