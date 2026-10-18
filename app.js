@@ -562,7 +562,9 @@ function configureOfflineInstall(){
     status.textContent='正在缓存应用组件…';return;
    }
    const all=await caches.keys();
-   const key=all.find(x=>x.startsWith('wish-factory-static-v'));
+   const scopePath=new URL('./',document.baseURI).pathname;
+   const cachePrefix='wish-factory-'+encodeURIComponent(scopePath)+'-static-v';
+   const key=all.find(x=>x.startsWith(cachePrefix));
    if(!key){status.textContent='正在准备离线资源，请保持网络连接…';return;}
    const cache=await caches.open(key);
    const mustHave=['','style.css','app.js','planner.js','pdf-extra.js','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs','vendor/xmind-bundle.js','vendor/media-bundle.js','vendor/jszip.min.js','vendor/pdf-lib.min.js'];

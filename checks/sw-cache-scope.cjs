@@ -5,36 +5,54 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 
-test('Service Worker activation must delete only old format-factory cache versions',async()=>{
+test('Service Worker activation migrates only legacy production and current-scope old caches',async()=>{
  const source=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8');
- const handlers={};
+ const events={};
+ const path1='/wish-format-factory/';
+ const scope='https://example.test'+path1;
+ const mainPrefix='wish-factory-'+encodeURIComponent(path1)+'-static-v';
+ const previewPrefix='wish-factory-'+encodeURIComponent('/wish-format-factory/preview/pr4/')+'-static-v';
+ const oldKeys=['another-app-offline-v3','wish-factory-static-v16','wish-factory-static-v18',
+   mainPrefix+'19',mainPrefix+'20',previewPrefix+'18','other-project-images-v1'];
  const deleted=[];
- let claimed=0, awaited;
- const cacheKeys=['another-app-offline-v3','wish-factory-static-v16',
-  'wish-factory-static-v17','wish-factory-static-v18',
-  'wish-factory-static-v19','other-project-images-v1'];
- const scope='https://example.test/wish-format-factory/';
- const self={
-  registration:{scope},
-  location:{origin:'https://example.test'},
-  clients:{claim:async()=>{claimed++;}},
-  addEventListener(name,fn){handlers[name]=fn;}
- };
- const caches={
-  keys:async()=>cacheKeys,
-  delete:async key=>{deleted.push(key);return true;}
- };
- vm.runInNewContext(source,{self,caches,URL,Promise},{timeout:1500,filename:'sw.js'});
- assert.equal(typeof handlers.activate,'function');
- handlers.activate({waitUntil(p){awaited=p;}});
- assert.ok(awaited&&typeof awaited.then==='function');
- await awaited;
- deleted.sort();
- assert.deepEqual(deleted,['wish-factory-static-v16','wish-factory-static-v17','wish-factory-static-v18']);
- assert.equal(claimed,1);
+ const self={registration:{scope},location:{origin:'https://example.test'},
+   clients:{claim:async()=>{}},addEventListener(n,f){events[n]=f;}};
+ const caches={keys:async()=>oldKeys,delete:async key=>{deleted.push(key);return true;}};
+ vm.runInNewContext(source,{self,caches,URL,Promise,encodeURIComponent},{timeout:1500,filename:'sw.js'});
+ let pending;events.activate({waitUntil(p){pending=p;}});await pending;
+ assert.deepEqual(deleted.sort(),['wish-factory-static-v16','wish-factory-static-v18',mainPrefix+'19'].sort());
+ assert.ok(!deleted.includes(mainPrefix+'20'));
+ assert.ok(!deleted.includes(previewPrefix+'18'));
  assert.ok(!deleted.includes('another-app-offline-v3'));
- assert.ok(!deleted.includes('other-project-images-v1'));
- assert.ok(!deleted.includes('wish-factory-static-v19'));
+});
+
+test('Service Worker preview scope cannot delete production, legacy or other draft caches',async()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8');
+ const events={};
+ const root='/wish-format-factory/';
+ const sub='/wish-format-factory/preview/pr4/';
+ const scope='https://example.test'+sub;
+ const prod='wish-factory-'+encodeURIComponent(root)+'-static-v';
+ const mine='wish-factory-'+encodeURIComponent(sub)+'-static-v';
+ const other='wish-factory-'+encodeURIComponent('/wish-format-factory/preview/pr5/')+'-static-v';
+ const keys=['wish-factory-static-v16',prod+'20',mine+'19',mine+'20',other+'19','another-app-v1'];
+ const deleted=[];
+ const self={registration:{scope},location:{origin:'https://example.test'},
+   clients:{claim:async()=>{}},addEventListener(n,f){events[n]=f;}};
+ const caches={keys:async()=>keys,delete:async key=>{deleted.push(key);return true;}};
+ vm.runInNewContext(source,{self,caches,URL,Promise,encodeURIComponent},{timeout:1500,filename:'sw.js'});
+ let pending;events.activate({waitUntil(p){pending=p;}});await pending;
+ assert.deepEqual(deleted,[mine+'19']);
+ assert.equal(deleted.includes(prod+'20'),false);
+ assert.equal(deleted.includes('wish-factory-static-v16'),false);
+ assert.equal(deleted.includes(other+'19'),false);
+});
+
+test('UI offline readiness inspects current scope cache, never another app or preview scope',()=>{
+ const app=fs.readFileSync(path.resolve(__dirname,'../app.js'),'utf8');
+ assert.match(app,/const scopePath=new URL\('\.\/'\,document\.baseURI\)\.pathname/);
+ assert.match(app,/const cachePrefix='wish-factory-'\+encodeURIComponent\(scopePath\)\+'-static-v'/);
+ assert.doesNotMatch(app,/all\.find\(x=>x\.startsWith\('wish-factory-static-v'\)\)/);
 });
 
 test('Service Worker only intercepts approved app assets, never user files or unrelated apps',async()=>{
