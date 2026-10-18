@@ -70,7 +70,7 @@ def main():
             "--page", "1", success=True
         )
         output = text(edited)
-        assert re.search(r"合同金额：200\s*元", output), output
+        assert re.search(r"合同金额：\s*200\s*元", output), output
         assert "合同金额：100元" not in output, output
         assert "客户名称：李先生" in output
         assert "第二页：原文不可更改" in output
@@ -102,7 +102,7 @@ def main():
             "unmodifiedSecondPage": True, "originalSHA256Unchanged": True,
             "ambiguousTextRejected": rejected["status"] == "REJECTED",
             "uneditablePageRejected": rejected_scan["status"] == "REJECTED",
-            "formatChangesPossible": True, "productionReady": False
+            "formatChangesPossible": True, "spacingChangedInCI": "合同金额： 200" in output, "productionReady": False
         }, ensure_ascii=False, indent=2))
 
 
