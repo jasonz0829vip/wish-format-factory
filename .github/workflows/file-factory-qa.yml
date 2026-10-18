@@ -68,6 +68,8 @@ jobs:
         env:
           QA_MOBILE: '1'
           OFFICE_PREVIEW_SCREENSHOT: mobile-office-preview-ci.png
+      - name: Real browser verifies production and preview PWA cache isolation
+        run: node checks/pwa-scope-isolation-e2e.cjs
       - name: Preserve test screenshot
         if: always()
         uses: actions/upload-artifact@v4
