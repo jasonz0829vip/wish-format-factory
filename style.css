@@ -20,3 +20,52 @@
 .archiveAction{cursor:pointer;background:transparent;border:1px solid #d6d6db;padding:5px 7px;border-radius:6px;color:inherit;text-decoration:none;font-size:12px;white-space:nowrap}
 .archiveAction:hover{background:#eeeef2}
 @media(max-width:520px){.archiveEntry{gap:5px}.archiveAction{font-size:11px;padding:5px}}
+
+/* PDF 本地可视化预览：复用已打包的 Mozilla PDF.js。 */
+.pdfPreviewFileButton{padding:6px 10px;border:1px solid #beb9e6;background:#f3f0ff;color:#5c4aa3;border-radius:8px;font-size:12px;font-weight:700;flex-shrink:0}
+.pdfPreviewFileButton:hover,.pdfPreviewFileButton:focus-visible{background:#e8e2fe;outline-color:#7366bb}
+.pdfPreviewDialog{width:min(1080px,96vw);max-width:96vw;height:min(92vh,940px);max-height:92vh;padding:0;border:1px solid #dedde9;border-radius:18px;box-shadow:0 18px 70px #1c244455;background:#fff;color:#263144;overflow:hidden}
+.pdfPreviewDialog::backdrop{background:#16162b90}
+.pdfPreviewHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 17px;border-bottom:1px solid #e9eaf0;background:#fafafd}
+.pdfPreviewHeader>div{display:flex;align-items:center;flex-wrap:wrap;gap:12px;min-width:0}
+.pdfPreviewHeader strong{white-space:nowrap}.pdfPreviewHeader span{font-size:12px;color:#656779;max-width:min(60vw,650px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfPreviewHeader button{width:32px;height:32px;border-radius:8px;background:#fff;border:1px solid #dedfe6;color:#3b3b48;font-size:23px}
+.pdfPreviewToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:10px 14px;background:#fff;border-bottom:1px solid #e8e8f0}
+.pdfPreviewToolbar button{padding:7px 10px;background:#fff;border:1px solid #dbdbe7;border-radius:8px;color:#3b3e58;font-size:12px}
+.pdfPreviewToolbar button:disabled{cursor:not-allowed;opacity:.4}
+.pdfPreviewToolbar button:not(:disabled):hover{background:#f1f0fc}
+.pdfPreviewToolbar span{font-size:12px;color:#565c72;white-space:nowrap}
+.pdfPreviewSeparator{width:1px;height:25px;background:#e3e2e9;margin:0 3px}
+.pdfPreviewToolbar .pdfPreviewDelete{color:#963c48;border-color:#e8c9cf}
+.pdfPreviewStage{height:calc(100% - 207px);overflow:auto;background:#e8eaf0;text-align:center;padding:18px}
+.pdfPreviewStage canvas{display:block;margin:0 auto;background:white;box-shadow:0 5px 24px #28334830;max-width:none}
+.pdfPreviewStatus{margin:8px 15px 2px;min-height:18px;font-size:12px;color:#56627c}
+.pdfPreviewStatus.pdfPreviewError{color:#ad3440}
+.pdfPreviewFootnote{font-size:11px;color:#778094;margin:3px 15px 12px}
+@media(max-width:650px){.pdfPreviewDialog{max-width:100vw;width:100vw;height:95vh;max-height:95vh;border-radius:12px}.pdfPreviewToolbar{gap:5px;padding:8px}.pdfPreviewToolbar button{padding:6px;font-size:11px}.pdfPreviewToolbar span{font-size:11px}.pdfPreviewSeparator{display:none}.pdfPreviewStage{height:calc(100% - 237px);padding:10px}.pdfPreviewHeader{padding:10px}}
+
+/* Office visual read-only preview: old files are never changed. */
+.officePreviewFileButton{padding:6px 10px;border:1px solid #cbd9e9;background:#f0f5ff;color:#325b95;border-radius:8px;font-size:12px;font-weight:700;flex-shrink:0}
+.officePreviewFileButton:disabled{cursor:wait;opacity:.65}
+.officePreviewFileButton:not(:disabled):hover,.officePreviewFileButton:focus-visible{background:#e1edff}
+
+/* Processing has no reliable numeric progress API: use an honest indeterminate bar. */
+.fill.indeterminate{width:34%!important;transition:none;animation:wish-busy 1.45s ease-in-out infinite}
+@keyframes wish-busy{0%{transform:translateX(-105%)}50%{transform:translateX(108%)}100%{transform:translateX(310%)}}
+@media(prefers-reduced-motion:reduce){.fill.indeterminate{animation:none;width:100%!important;opacity:.55}}
+
+/* The preview modal must give remaining height to the page itself.
+   Avoid static pixel subtraction which left an empty bottom on phones. */
+.pdfPreviewDialog[open]{display:flex;flex-direction:column}
+.pdfPreviewHeader,.pdfPreviewToolbar{flex-shrink:0}
+.pdfPreviewDialog .pdfPreviewStage{flex:1;min-height:0;height:auto}
+.pdfPreviewDialog .pdfPreviewStatus,.pdfPreviewDialog .pdfPreviewFootnote{flex-shrink:0}
+@supports (height:95dvh){
+ @media(max-width:650px){.pdfPreviewDialog{height:95dvh;max-height:95dvh}}
+}
+
+/* Touch-friendly PDF controls, no extra JS or styling dependency. */
+@media(max-width:650px){
+ .pdfPreviewToolbar button{min-height:40px;touch-action:manipulation}
+ .pdfPreviewHeader button{min-height:40px;min-width:40px;touch-action:manipulation}
+}

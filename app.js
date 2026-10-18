@@ -64,9 +64,56 @@ function showUnpacked(items){
  box.append(list);
 }
 function errorMessage(e){const s=String(e&&e.message||e||'转换失败');return s.length>240?s.slice(0,240)+'…':s;}
+// A new source file must never inherit the previous file's download link or error.
+function clearPreviousResult(){
+ if(lastUrl){URL.revokeObjectURL(lastUrl);lastUrl=null;}
+ extraUrls.forEach(u=>URL.revokeObjectURL(u));
+ extraUrls=[];
+ const box=byId('result');box.hidden=true;box.replaceChildren();
+}
+/* Office 文件预览复用现有 LibreOffice→PDF 转换服务和 PDF.js 阅读器。
+ * 只读预览不写回原 Office，不依赖第二套在线编辑器。
+ */
+async function previewOfficeFile(file,button){
+ if(busy){setStatus('当前任务正在处理，请稍后再试',false);return;}
+ busy=true;
+ const oldLabel=button.textContent;
+ button.disabled=true;
+ button.textContent='正在生成预览…';
+ runBtn.disabled=true;
+ progress(true,'正在生成只读预览','使用已有 Windows LibreOffice 引擎，原文件不会被修改。');
+ try{
+  if(!file||!officeExt.has(ext(file))||!window.WishFormats.canConvert(file.name,'pdf'))
+   throw new Error('此 Office 格式尚未通过安全预览检查');
+  if(!window.WishPdfPreview)throw new Error('本地 PDF 阅读组件没有加载');
+  if(file.size>25*1024*1024)throw new Error('Office 预览目前限 25MB，请先处理较小的文档');
+  const rendered=await convertByWindows({target:'pdf',source:'office',op:'office_convert'},[file]);
+  if(!rendered||!rendered.blob||rendered.blob.size<8)
+   throw new Error('LibreOffice 未返回有效预览文件');
+  const header=new TextDecoder('ascii').decode(await rendered.blob.slice(0,5).arrayBuffer());
+  if(header!=='%PDF-')throw new Error('预览生成失败：Windows 服务返回的不是 PDF');
+  const preview=new File([rendered.blob],basename(file)+'-只读预览.pdf',{type:'application/pdf'});
+  await window.WishPdfPreview.open(preview,{sourceName:file.name,readOnlyNote:'仅供浏览，不能在此修改原 '+ext(file).toUpperCase()+' 文件。'});
+ }catch(e){
+  if(e&&e.pair)showMessage('Office 预览需要配对','请先在 Windows 电脑打开 http://127.0.0.1:8790/api/pair，完成本地转换服务配对，再重试预览。',true);
+  else showMessage('Office 预览未完成',errorMessage(e),true);
+ }finally{
+  progress(false);
+  busy=false;
+  button.textContent=oldLabel;
+  button.disabled=false;
+  updatePlan();
+ }
+}
 function updateFiles(next) {
+ if(busy){
+  input.value='';
+  setStatus('正在处理当前文件，完成后才能更换',false);
+  return false;
+ }
  const seen=new Map();for(const f of next)seen.set(f.name+'#'+f.size+'#'+f.lastModified,f);
  files=[...seen.values()].slice(0,20);
+ clearPreviousResult();
  input.value='';const wrap=byId('filesWrap'),list=byId('fileList');list.replaceChildren();
  wrap.hidden=!files.length;byId('fileCount').textContent=files.length+' 个';
  files.forEach((f,i)=>{
@@ -74,9 +121,35 @@ function updateFiles(next) {
   const name=document.createElement('span');name.className='filename';name.title=f.name;name.textContent=f.name;
   const size=document.createElement('span');size.className='size';size.textContent=units(f.size);
   const x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','移除 '+f.name);x.onclick=()=>updateFiles(files.filter((_,j)=>j!==i));
-  row.append(name,size,x);list.append(row);
+  if(ext(f)==='pdf'){
+   const preview=document.createElement('button');preview.type='button';
+   preview.className='pdfPreviewFileButton';preview.textContent='预览 / 选页';
+   preview.setAttribute('aria-label','预览 '+f.name+' 并选择页面');
+   preview.onclick=()=>{
+    if(!window.WishPdfPreview){showMessage('预览不可用','本地 PDF 阅读组件未加载，请刷新后重试。',true);return;}
+    void window.WishPdfPreview.open(f,{
+     onDelete:async page=>{
+      const out=await window.WishPdf.modify(f,{op:'pdf_delete',pages:[page]},basename(f));
+      addDownload(out.name,out.blob,'✓ 已从 '+f.name+' 删除第 '+page+' 页，原件未改变。');
+     },
+     onExtract:async page=>{
+      const out=await window.WishPdf.extract(f,[page],basename(f),'pdf');
+      addDownload(out.name,out.blob,'✓ 已从 '+f.name+' 提取第 '+page+' 页，原件未改变。');
+     }
+    });
+   };
+   row.append(name,size,preview,x);
+  }else if(officeExt.has(ext(f))&&window.WishFormats.canConvert(f.name,'pdf')){
+   const preview=document.createElement('button');preview.type='button';
+   preview.className='officePreviewFileButton';preview.textContent='预览文档';
+   preview.setAttribute('aria-label','只读预览 '+f.name);
+   preview.onclick=()=>{void previewOfficeFile(f,preview);};
+   row.append(name,size,preview,x);
+  }else row.append(name,size,x);
+  list.append(row);
  });
  updateQuickSuggestions();updatePlan();
+ return true;
 }
 // 泛化的操作规划见 planner.js，执行层不再维护重复的关键词列表。
 function updateQuickSuggestions(){
@@ -174,7 +247,7 @@ function updatePlan(){
  }else {setStatus(files.length?plan.reason:'等待你许愿…',false);if(!busy){runBtn.disabled=false;byId('runText').textContent='开始转换';}}
 }
 function progress(show,title,detail){byId('progress').hidden=!show;byId('progressTitle').textContent=title||'正在执行';byId('progressRate').textContent=show?'处理中':'';
- byId('progressDetail').textContent=detail||'';byId('progressFill').style.width=show?'62%':'0';}
+ byId('progressDetail').textContent=detail||'';byId('progressFill').classList.toggle('indeterminate',show);byId('progressFill').style.width=show?'34%':'0';}
 async function imageBitmap(file){
  let input=file;
  try{return await createImageBitmap(input);}catch(e){
@@ -412,9 +485,7 @@ async function doConvert(){
   finally{progress(false);busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';}
  }
  if(!plan.ok){if(plan.needsChoice){byId('formatChoice').focus();return;}showMessage('还不能开始',plan.reason,true);return;}
- if(lastUrl){URL.revokeObjectURL(lastUrl);lastUrl=null;}
- extraUrls.forEach(u=>URL.revokeObjectURL(u));extraUrls=[];
- byId('result').hidden=true;busy=true;runBtn.disabled=true;byId('runText').textContent='正在转换…';
+ clearPreviousResult();busy=true;runBtn.disabled=true;byId('runText').textContent='正在转换…';
  progress(true,plan.title,plan.detail);
  try{
   let output;
@@ -434,10 +505,10 @@ async function doConvert(){
   progress(false);
   addDownload(output.name,output.blob,output.detail||('✓ 已生成 '+output.name+'（'+units(output.blob.size)+'）。文件已经可以下载。'));
  }catch(e){progress(false);if(e.pair)showPair(plan);else showMessage('转换未完成',errorMessage(e),true);}
- finally{busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';}
+ finally{busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';updatePlan();}
 }
 input.onchange=()=>{
- const selected=[...input.files];updateFiles(selected);
+ const selected=[...input.files];if(!updateFiles(selected))return;
  if(!wish.value.trim()&&selected.length){
   const type=ext(selected[0]);
   wish.placeholder=officeExt.has(type)?'例如：把这份 Word 转成 PDF，或只导出第二页':
@@ -491,7 +562,9 @@ function configureOfflineInstall(){
     status.textContent='正在缓存应用组件…';return;
    }
    const all=await caches.keys();
-   const key=all.find(x=>x.startsWith('wish-factory-static-v'));
+   const scopePath=new URL('./',document.baseURI).pathname;
+   const cachePrefix='wish-factory-'+encodeURIComponent(scopePath)+'-static-v';
+   const key=all.find(x=>x.startsWith(cachePrefix));
    if(!key){status.textContent='正在准备离线资源，请保持网络连接…';return;}
    const cache=await caches.open(key);
    const mustHave=['','style.css','app.js','planner.js','pdf-extra.js','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs','vendor/xmind-bundle.js','vendor/media-bundle.js','vendor/jszip.min.js','vendor/pdf-lib.min.js'];
