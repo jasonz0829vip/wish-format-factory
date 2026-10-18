@@ -8,7 +8,7 @@ test('Office preview reuses own Windows PDF conversion and existing PDF.js rende
  assert.match(app,/await convertByWindows\(\{target:'pdf',source:'office',op:'office_convert'\},\[file\]\)/);
  assert.match(app,/header!=='%PDF-'/);
  assert.match(app,/readOnlyNote:/);
- assert.match(app,/WishPdfPreview\.open\(preview,\{readOnlyNote:/);
+ assert.match(app,/WishPdfPreview\.open\(preview,\{sourceName:file\.name,readOnlyNote:/);
  assert.match(preview,/callbacks\.readOnlyNote \|\|/);
  assert.match(css,/\.officePreviewFileButton/);
  assert.doesNotThrow(()=>new vm.Script(app,{filename:'app.js'}));
