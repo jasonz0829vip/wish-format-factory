@@ -60,9 +60,12 @@ async function main(){
       const d=document.getElementById('pdfPreviewDialog');
       return d.open && document.getElementById('pdfPreviewStatus').textContent.includes('不能在此修改原');
     },null,{timeout:30000});
-    assert.equal(await page.locator('#pdfPreviewExtract').isDisabled(),true,'preview is read-only');
-    assert.equal(await page.locator('#pdfPreviewDelete').isDisabled(),true,'preview is read-only');
-    assert.match(await page.locator('#pdfPreviewFilename').textContent(),/只读预览\.pdf/);
+    assert.equal(await page.locator('#pdfPreviewExtract').isHidden(),true,'Office preview must not show PDF extract');
+    assert.equal(await page.locator('#pdfPreviewDelete').isHidden(),true,'Office preview must not show PDF deletion');
+    assert.equal(await page.locator('#pdfPreviewActionSeparator').isHidden(),true);
+    assert.equal(await page.locator('#pdfPreviewFootnote').isHidden(),true);
+    assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'文档只读预览');
+    assert.equal(await page.locator('#pdfPreviewFilename').textContent(),'合同预览.'+ext);
     const onPage=await page.locator('#pdfPreviewPage').textContent();
     assert.match(onPage,/1\s*\/\s*1/);
     if(ext==='docx')await page.screenshot({path:process.env.OFFICE_PREVIEW_SCREENSHOT||path.join(process.cwd(),'office-preview-ci.png')});
