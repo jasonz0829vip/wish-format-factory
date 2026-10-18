@@ -4,7 +4,7 @@
   "description": "Offline-first file conversion PWA with Chinese natural language planning",
   "main": "app.js",
   "scripts": {
-    "test": "node --test checks/format-regression.cjs checks/pdf-preview-contract.cjs checks/image-editor-contract.cjs"
+    "test": "node --test checks/format-regression.cjs checks/pdf-preview-contract.cjs checks/image-editor-contract.cjs checks/office-preview-contract.cjs"
   },
   "keywords": [],
   "author": "",
