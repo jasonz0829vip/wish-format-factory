@@ -1,8 +1,8 @@
 'use strict';
-/* Optional acceptance: render a real PDF, then edit a deterministic 3-page PDF created by bundled pdf-lib. */
+/* Optional acceptance: load a supplied real PDF (RTX) or generate a PDF fixture (CI), then edit a deterministic 3-page PDF with bundled pdf-lib. */
 const fs=require('node:fs'), path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const pdf=process.argv[2];
-if(!pdf||!fs.existsSync(pdf)){console.error('Usage: node checks/pdf-preview-e2e.cjs <existing multi-page PDF>');process.exit(2);}
+if(pdf&&!fs.existsSync(pdf)){console.error('PDF test file not found: '+pdf);process.exit(2);}
 let playwright;
 try{playwright=require('playwright');}
 catch(error){try{playwright=require('playwright-core');}catch(again){console.error('E2E unavailable: install/use an existing Playwright installation (not bundled).');process.exit(3);}}
@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
  fs.createReadStream(absolute).on('error',()=>{res.writeHead(404);res.end();}).once('open',()=>{res.writeHead(200,{'Content-Type':type[path.extname(absolute)]||'application/octet-stream','Cache-Control':'no-cache'});}).pipe(res);
 });
 async function run(){
- const before=crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex');
+ const before=pdf?crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex'):null;
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  let browser;
  try{
@@ -26,7 +26,16 @@ async function run(){
   const page=await browser.newPage({acceptDownloads:true,viewport:{width:1280,height:900}});
   const failures=[];page.on('pageerror',e=>failures.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
-  await page.locator('#fileInput').setInputFiles(pdf);
+  if(pdf) await page.locator('#fileInput').setInputFiles(pdf);
+  else {
+    // The CI runner does not require a private Windows fixture or external download.
+    const first=Buffer.from(await page.evaluate(async()=>{
+      const doc=await window.PDFLib.PDFDocument.create();
+      const p=doc.addPage([595,842]);p.drawText('CI initial PDF preview',{x:52,y:730,size:24});
+      return Array.from(await doc.save());
+    }));
+    await page.locator('#fileInput').setInputFiles({name:'ci-one-page-qa.pdf',mimeType:'application/pdf',buffer:first});
+  }
   await page.getByRole('button',{name:/预览.*(选页|选择页面)/}).click();
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
@@ -64,7 +73,7 @@ async function run(){
   await page.waitForFunction(()=>document.getElementById('pdfPreviewPage').textContent.startsWith('第 2 /'));
   await page.locator('#pdfPreviewZoomIn').click();
   await page.waitForFunction(()=>document.getElementById('pdfPreviewZoomValue').textContent==='120%'&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),null,{timeout:30000});
-  await page.screenshot({path:process.env.PREVIEW_SCREENSHOT||path.join(path.dirname(pdf),'pdf-preview-acceptance.png')});
+  await page.screenshot({path:process.env.PREVIEW_SCREENSHOT||path.join(process.cwd(),'pdf-preview-acceptance.png')});
   await page.locator('#pdfPreviewDelete').click();
   await page.waitForFunction(()=>document.querySelector('#result a.downloadLink')?.download.includes('删除指定页'),null,{timeout:20000});
   const details=await page.evaluate(async()=>{
@@ -76,9 +85,9 @@ async function run(){
   assert.equal(details.pages,total-1);
   assert.ok(details.bytes>100);
   assert.ok(!failures.length,'Browser JS errors: '+failures.join('; '));
-  const after=crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex');
-  assert.equal(after,before,'original PDF must remain unchanged');
-  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:true,browserErrors:failures},null,2));
+  const after=pdf?crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex'):null;
+  if(pdf) assert.equal(after,before,'original PDF must remain unchanged');
+  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',browserErrors:failures},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error('E2E FAIL:',error.stack||error);server.close();process.exitCode=1;});
