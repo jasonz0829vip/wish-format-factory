@@ -1,5 +1,5 @@
 'use strict';
-/* Optional real-browser acceptance: node checks/pdf-preview-e2e.cjs <real-multipage-pdf> */
+/* Optional acceptance: render a real PDF, then edit a deterministic 3-page PDF created by bundled pdf-lib. */
 const fs=require('node:fs'), path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const pdf=process.argv[2];
 if(!pdf||!fs.existsSync(pdf)){console.error('Usage: node checks/pdf-preview-e2e.cjs <existing multi-page PDF>');process.exit(2);}
@@ -31,28 +31,54 @@ async function run(){
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
   const initial=await page.locator('#pdfPreviewPage').textContent();
-  const total=Number((initial.match(/\/\s*(\d+)/)||[])[1]);
-  assert.ok(total>=2,'sample must have multiple pages');
+  const samplePages=Number((initial.match(/\\/\\s*(\\d+)/)||[])[1]);
+  assert.ok(samplePages>=1,'real PDF sample did not render: '+initial);
+  console.log('REAL_PDF_PAGE_LABEL='+initial);
+  await page.locator('#pdfPreviewExtract').click();
+  await page.locator('#pdfPreviewDialog').waitFor({state:'hidden',timeout:20000});
+  await page.locator('#result a.downloadLink').waitFor({state:'visible',timeout:20000});
+  const extracted=await page.evaluate(async()=>{
+    const link=document.querySelector('#result a.downloadLink');
+    const blob=await (await fetch(link.href)).blob();
+    const result=await window.PDFLib.PDFDocument.load(await blob.arrayBuffer());
+    return {pages:result.getPageCount(),bytes:blob.size};
+  });
+  assert.equal(extracted.pages,1);
+  const crafted=Buffer.from(await page.evaluate(async()=>{
+    const doc=await window.PDFLib.PDFDocument.create();
+    for(let n=1;n<=3;n++){
+      const p=doc.addPage([595,842]);
+      p.drawText('Local preview acceptance page '+n,{x:48,y:760,size:23});
+    }
+    return Array.from(await doc.save());
+  }));
+  await page.locator('#fileInput').setInputFiles({name:'local-three-page-qa.pdf',mimeType:'application/pdf',buffer:crafted});
+  await page.locator('.pdfPreviewFileButton').click();
+  await page.waitForFunction(()=>{
+    const label=document.getElementById('pdfPreviewPage').textContent;
+    const status=document.getElementById('pdfPreviewStatus').textContent;
+    return label.includes('/ 3 ')&&status.includes('本机浏览器');
+  },null,{timeout:30000});
+  const total=3;
   await page.locator('#pdfPreviewNext').click();
   await page.waitForFunction(()=>document.getElementById('pdfPreviewPage').textContent.startsWith('第 2 /'));
   await page.locator('#pdfPreviewZoomIn').click();
-  await page.waitForFunction(()=>document.getElementById('pdfPreviewZoomValue').textContent==='120%');
+  await page.waitForFunction(()=>document.getElementById('pdfPreviewZoomValue').textContent==='120%'&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),null,{timeout:30000});
   await page.screenshot({path:process.env.PREVIEW_SCREENSHOT||path.join(path.dirname(pdf),'pdf-preview-acceptance.png')});
   await page.locator('#pdfPreviewDelete').click();
-  const link=page.locator('#result a.downloadLink');
-  await link.waitFor({state:'visible',timeout:20000});
+  await page.waitForFunction(()=>document.querySelector('#result a.downloadLink')?.download.includes('删除指定页'),null,{timeout:20000});
   const details=await page.evaluate(async()=>{
-    const a=document.querySelector('#result a.downloadLink');
-    const blob=await (await fetch(a.href)).blob();
-    const pdf=await window.PDFLib.PDFDocument.load(await blob.arrayBuffer());
-    return {name:a.download,bytes:blob.size,pages:pdf.getPageCount()};
+    const link=document.querySelector('#result a.downloadLink');
+    const blob=await (await fetch(link.href)).blob();
+    const result=await window.PDFLib.PDFDocument.load(await blob.arrayBuffer());
+    return {name:link.download,bytes:blob.size,pages:result.getPageCount()};
   });
   assert.equal(details.pages,total-1);
   assert.ok(details.bytes>100);
   assert.ok(!failures.length,'Browser JS errors: '+failures.join('; '));
   const after=crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex');
   assert.equal(after,before,'original PDF must remain unchanged');
-  console.log(JSON.stringify({status:'PASS',originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:true,browserErrors:failures},null,2));
+  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:true,browserErrors:failures},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error('E2E FAIL:',error.stack||error);server.close();process.exitCode=1;});
