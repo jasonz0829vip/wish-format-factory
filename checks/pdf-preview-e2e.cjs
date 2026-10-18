@@ -39,6 +39,10 @@ async function run(){
   await page.getByRole('button',{name:/预览.*(选页|选择页面)/}).click();
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
+  assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'PDF 页面预览');
+  assert.equal(await page.locator('#pdfPreviewExtract').isVisible(),true);
+  assert.equal(await page.locator('#pdfPreviewDelete').isVisible(),true);
+  assert.equal(await page.locator('#pdfPreviewFootnote').isVisible(),true);
   const initial=await page.locator('#pdfPreviewPage').textContent();
   const samplePages=Number((initial.match(/\/\s*(\d+)/)||[])[1]);
   assert.ok(samplePages>=1,'real PDF sample did not render: '+initial);
