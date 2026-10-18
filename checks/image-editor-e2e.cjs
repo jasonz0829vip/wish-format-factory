@@ -88,16 +88,35 @@ async function main(){
     }),limit]);
   });
   assert.ok(offlineReady,'miniPaint editor is not cached offline');
+  const jpeg=Buffer.from(await page.evaluate(async()=>{
+    const c=document.createElement('canvas');c.width=96;c.height=64;
+    const ctx=c.getContext('2d');ctx.fillStyle='#31a650';ctx.fillRect(0,0,96,64);
+    const blob=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.95));
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  }));
+  assert.ok(jpeg[0]===0xff&&jpeg[1]===0xd8,'browser did not generate real JPEG bytes');
   await context.setOffline(true);
+  await page.setViewportSize({width:390,height:844});
   await page.reload({waitUntil:'domcontentloaded',timeout:25000});
-  await openInput();
+  await page.locator('#fileInput').setInputFiles({name:'中文离线照片.jpeg',mimeType:'image/jpeg',buffer:jpeg});
   await page.locator('.imageEditorFileButton').click();
   await page.waitForFunction(()=>document.getElementById('imageEditorStatus')?.textContent.includes('已加载'),null,{timeout:30000});
   assert.equal(await page.locator('#imageEditorSave').isEnabled(),true);
+  await page.screenshot({path:process.env.IMAGE_EDITOR_MOBILE_SCREENSHOT||path.join(process.cwd(),'image-editor-mobile-ci.png')});
+  await page.locator('#imageEditorSave').click();
+  await page.waitForFunction(()=>document.querySelector('#result a.downloadLink')?.download.endsWith('-已编辑.png'),null,{timeout:20000});
+  const jpegConverted=await page.evaluate(async()=>{
+    const a=document.querySelector('#result a.downloadLink');const blob=await(await fetch(a.href)).blob();
+    const bitmap=await createImageBitmap(blob);
+    return {name:a.download,mime:blob.type,width:bitmap.width,height:bitmap.height,bytes:blob.size};
+  });
+  assert.equal(jpegConverted.mime,'image/png');
+  assert.equal(jpegConverted.width,96);
+  assert.equal(jpegConverted.height,64);
   assert.deepEqual(external,[],'unexpected network outside localhost');
   assert.deepEqual(httpErrors,[],'local editor assets returned error');
   assert.deepEqual(errors,[],'browser JavaScript exception');
-  console.log(JSON.stringify({status:'PASS',editor:'miniPaint v4.14.3',originalSize:original.length,initial,edited:exported,originalUnchanged:true,offlineOpen:true,externalRequests:external.length,httpErrors:0,browserErrors:0},null,2));
+  console.log(JSON.stringify({status:'PASS',editor:'miniPaint v4.14.3',originalSize:original.length,initial,edited:exported,originalUnchanged:true,offlineOpen:true,offlineMobileJpeg:jpegConverted,externalRequests:external.length,httpErrors:0,browserErrors:0},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error('IMAGE E2E FAIL:',error.stack||error);process.exitCode=1;});
