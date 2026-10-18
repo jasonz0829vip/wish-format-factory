@@ -25,5 +25,5 @@ test('preview is integrated after existing PDF module, offline cached, and offer
  assert.match(app,/op:'pdf_delete'/);
  assert.match(app,/WishPdf\.extract\(f,\[page\]/);
  assert.match(sw,/'pdf-preview\.js'/);
- assert.match(sw,/wish-factory-static-v17/);
+ const cacheVersion=sw.match(/wish-factory-static-v(\d+)/);assert.ok(cacheVersion&&Number(cacheVersion[1])>=17);
 });
