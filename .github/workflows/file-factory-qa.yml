@@ -64,3 +64,52 @@ jobs:
             office-preview-ci.png
           if-no-files-found: ignore
           retention-days: 7
+
+  windows-browser-smoke:
+    name: Windows Chrome lean smoke (isolated, no RDC)
+    runs-on: windows-2025
+    timeout-minutes: 18
+    steps:
+      - name: Check out exact feature commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned project packages
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify format/PDF/Office regressions
+        run: npm test
+      - name: Install isolated browser automation controller
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.55.0
+      - name: Locate preinstalled Windows Chrome
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+          )
+          $chrome = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $chrome) { throw "GitHub-hosted Windows runner has no preinstalled Chrome" }
+          "CHROME_PATH=$chrome" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Real Windows Chrome PDF page editing and damage handling
+        run: node checks/pdf-preview-e2e.cjs
+        env:
+          PREVIEW_SCREENSHOT: windows-pdf-preview.png
+      - name: Real Windows Chrome Office preview route and source safety
+        run: node checks/office-preview-e2e.cjs
+        env:
+          OFFICE_PREVIEW_SCREENSHOT: windows-office-preview.png
+      - name: Retain Windows smoke screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-windows-chrome-smoke
+          path: |
+            windows-pdf-preview.png
+            windows-office-preview.png
+          if-no-files-found: ignore
+          retention-days: 7
