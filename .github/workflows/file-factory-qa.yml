@@ -54,6 +54,16 @@ jobs:
         run: node checks/office-preview-e2e.cjs
         env:
           OFFICE_PREVIEW_SCREENSHOT: office-preview-ci.png
+      - name: Phone-width Chrome PDF preview and page operations
+        run: node checks/pdf-preview-e2e.cjs
+        env:
+          QA_MOBILE: '1'
+          PREVIEW_SCREENSHOT: mobile-pdf-preview-ci.png
+      - name: Phone-width Chrome Office read-only preview
+        run: node checks/office-preview-e2e.cjs
+        env:
+          QA_MOBILE: '1'
+          OFFICE_PREVIEW_SCREENSHOT: mobile-office-preview-ci.png
       - name: Preserve test screenshot
         if: always()
         uses: actions/upload-artifact@v4
@@ -62,6 +72,8 @@ jobs:
           path: |
             pdf-preview-ci.png
             office-preview-ci.png
+            mobile-pdf-preview-ci.png
+            mobile-office-preview-ci.png
           if-no-files-found: ignore
           retention-days: 7
 
