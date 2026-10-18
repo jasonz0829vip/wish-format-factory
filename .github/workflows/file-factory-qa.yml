@@ -1,0 +1,60 @@
+name: File Factory isolated acceptance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-factory-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-pdf-preview:
+    name: PDF regression + Chromium end-to-end
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install project dependencies safely
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run original and preview regression
+        run: npm test
+      - name: Install pinned browser controller
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.55.0
+      - name: Resolve isolated Chromium binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v chromium)" >> "$GITHUB_ENV"
+          else
+            npx playwright-core install chromium
+            echo "CHROME_PATH=$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" >> "$GITHUB_ENV"
+          fi
+      - name: Browser PDF preview, extraction, three-page editing and source preservation
+        run: node checks/pdf-preview-e2e.cjs
+        env:
+          PREVIEW_SCREENSHOT: pdf-preview-ci.png
+      - name: Preserve test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-preview-chromium-qa
+          path: pdf-preview-ci.png
+          if-no-files-found: ignore
+          retention-days: 7
