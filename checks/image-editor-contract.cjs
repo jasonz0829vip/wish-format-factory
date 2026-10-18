@@ -1,0 +1,42 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+test('miniPaint v4.14.3 is an exact pinned upstream build with its licenses',()=>{
+  const bundle=fs.readFileSync(path.join(root,'image-editor/dist/bundle.js'));
+  const sha=crypto.createHash('sha1').update('blob '+bundle.length+'\0').update(bundle).digest('hex');
+  assert.equal(sha,'c16451f1ee5d0c56d24eb83c51a79875eec8b754');
+  assert.match(read('image-editor/MIT-LICENSE.txt'),/Permission is hereby granted/);
+  assert.match(read('image-editor/dist/bundle.js.LICENSE.txt'),/jQuery JavaScript Library/);
+  const page=read('image-editor/index.html');
+  assert.match(page,/src="dist\/bundle\.js"/);
+  assert.match(page,/connect-src 'none'/);
+  assert.match(page,/script-src 'self'/);
+  assert.doesNotMatch(page,/<script[^>]*src="https?:/i);
+});
+test('image editor bridge uses documented miniPaint API without uploading user files',()=>{
+  const bridge=read('image-editor-bridge.js'),html=read('index.html'),app=read('app.js');
+  assert.doesNotThrow(()=>new vm.Script(bridge,{filename:'image-editor-bridge.js'}));
+  assert.match(bridge,/Layers\.insert\(/);
+  assert.match(bridge,/Layers\.get_dimensions\(/);
+  assert.match(bridge,/Layers\.convert_layers_to_canvas\(/);
+  assert.match(bridge,/URL\.createObjectURL\(file\)/);
+  assert.doesNotMatch(bridge,/\bfetch\(|XMLHttpRequest|FormData\(/);
+  assert.match(html,/id="imageEditorDialog"/);
+  assert.match(html,/id="imageEditorFrame"/);
+  assert.match(html,/id="imageEditorSave"/);
+  assert.match(html,/src="\.\/image-editor-bridge\.js"/);
+  assert.match(app,/WishImageEditor\.open\(f/);
+  assert.match(app,/addDownload\(name,blob/);
+});
+test('offline cache includes all vendored assets and bumps the cache revision',()=>{
+  const sw=read('sw.js');
+  const found=sw.match(/const IMAGE_EDITOR_ASSETS=(\[[^\n]+\]);/);
+  assert.ok(found,'offline miniPaint asset list');
+  const paths=JSON.parse(found[1]);
+  assert.ok(paths.length>=34);
+  for(const file of paths)assert.ok(fs.existsSync(path.join(root,file)),file);
+  assert.match(sw,/wish-factory-static-v18/);
+  assert.match(sw,/\.\.\.IMAGE_EDITOR_ASSETS/);
+});
