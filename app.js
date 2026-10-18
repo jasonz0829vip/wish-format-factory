@@ -92,6 +92,17 @@ function updateFiles(next) {
     });
    };
    row.append(name,size,preview,x);
+  }else if(['png','jpg','jpeg','webp','bmp','avif'].includes(ext(f))){
+   const edit=document.createElement('button');edit.type='button';
+   edit.className='imageEditorFileButton';edit.textContent='编辑图片';
+   edit.setAttribute('aria-label','使用 miniPaint 编辑 '+f.name);
+   edit.onclick=()=>{
+    if(!window.WishImageEditor){showMessage('编辑器不可用','本地 miniPaint 组件尚未加载，请刷新后重试。',true);return;}
+    void window.WishImageEditor.open(f,async(blob,name)=>{
+     addDownload(name,blob,'✓ 已从原图片生成新 PNG（'+units(blob.size)+'），原文件未改变。');
+    }).catch(err=>showMessage('图片编辑暂不可用',errorMessage(err),true));
+   };
+   row.append(name,size,edit,x);
   }else row.append(name,size,x);
   list.append(row);
  });
@@ -513,7 +524,7 @@ function configureOfflineInstall(){
    const key=all.find(x=>x.startsWith('wish-factory-static-v'));
    if(!key){status.textContent='正在准备离线资源，请保持网络连接…';return;}
    const cache=await caches.open(key);
-   const mustHave=['','style.css','app.js','planner.js','pdf-extra.js','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs','vendor/xmind-bundle.js','vendor/media-bundle.js','vendor/jszip.min.js','vendor/pdf-lib.min.js'];
+   const mustHave=['','style.css','app.js','planner.js','pdf-extra.js','vendor/pdf.min.mjs','vendor/pdf.worker.min.mjs','vendor/xmind-bundle.js','vendor/media-bundle.js','vendor/jszip.min.js','vendor/pdf-lib.min.js','image-editor/index.html','image-editor/dist/bundle.js'];
    const checks=await Promise.all(mustHave.map(x=>cache.match(new URL(x,document.baseURI).href)));
    const ready=checks.filter(Boolean).length;
    if(ready===mustHave.length){
