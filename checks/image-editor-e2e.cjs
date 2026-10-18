@@ -34,8 +34,9 @@ async function main(){
   }));
   const openInput=()=>page.locator('#fileInput').setInputFiles({name:'测试照片.jpg.png',mimeType:'image/png',buffer:original});
   await openInput();
-  const originalDigest=await page.locator('#fileInput').evaluate(async el=>{
-    const hash=await crypto.subtle.digest('SHA-256',await el.files[0].arrayBuffer());
+  const originalDigest=await page.evaluate(async()=>{
+    // App copies the selected File into its own array, then clears the native input.
+    const hash=await crypto.subtle.digest('SHA-256',await files[0].arrayBuffer());
     return Array.from(new Uint8Array(hash)).map(n=>n.toString(16).padStart(2,'0')).join('');
   });
   await page.locator('.imageEditorFileButton').click();
@@ -71,8 +72,9 @@ async function main(){
   assert.equal(exported.mime,'image/png');assert.equal(exported.width,120);assert.equal(exported.height,80);
   assert.ok(exported.bytes>150);
   assert.ok(exported.pixel[0]>=220&&exported.pixel[1]<90&&exported.pixel[2]<90,'edited red pixel not found');
-  const afterDigest=await page.locator('#fileInput').evaluate(async el=>{
-    const hash=await crypto.subtle.digest('SHA-256',await el.files[0].arrayBuffer());
+  const afterDigest=await page.evaluate(async()=>{
+    // App copies the selected File into its own array, then clears the native input.
+    const hash=await crypto.subtle.digest('SHA-256',await files[0].arrayBuffer());
     return Array.from(new Uint8Array(hash)).map(n=>n.toString(16).padStart(2,'0')).join('');
   });
   assert.equal(afterDigest,originalDigest,'uploaded original image changed');
