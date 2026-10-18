@@ -59,6 +59,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: file-factory-chromium-qa
-          path: |\n            pdf-preview-ci.png\n            image-editor-ci.png
+          path: |
+            pdf-preview-ci.png
+            image-editor-ci.png
           if-no-files-found: ignore
           retention-days: 7
