@@ -95,7 +95,7 @@ async function main(){
   delayMs=1150;
   await page.locator('#fileInput').setInputFiles({name:'处理中原文.docx',mimeType:'application/octet-stream',buffer:Buffer.from('fixed-upload')});
   await page.locator('.officePreviewFileButton').click();
-  await page.waitForFunction(()=>busy&&document.querySelector('.officePreviewFileButton')?.disabled===true);
+  await page.waitForFunction(()=>busy&&document.querySelector('.officePreviewFileButton')?.disabled===true&&document.getElementById('progressFill')?.classList.contains('indeterminate'));
   await page.locator('#fileInput').setInputFiles({name:'恶意中途替换.xlsx',mimeType:'application/octet-stream',buffer:Buffer.from('changed-upload')});
   assert.equal(await page.evaluate(()=>files[0].name),'处理中原文.docx','file list changed while preview was running');
   assert.match(await page.locator('#intentBadge').textContent(),/正在处理当前文件/);
