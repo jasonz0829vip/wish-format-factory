@@ -84,10 +84,25 @@ async function run(){
   });
   assert.equal(details.pages,total-1);
   assert.ok(details.bytes>100);
+  // Damaged or oversized PDF must fail visibly without creating a corrupt download.
+  await page.locator('#fileInput').setInputFiles({name:'damaged.pdf',mimeType:'application/pdf',buffer:Buffer.from('invalid pdf contents')});
+  await page.locator('.pdfPreviewFileButton').click();
+  await page.waitForFunction(()=>document.getElementById('pdfPreviewStatus').textContent.includes('无法预览此 PDF'),null,{timeout:20000});
+  assert.equal(await page.locator('#pdfPreviewExtract').isDisabled(),true);
+  assert.equal(await page.locator('#pdfPreviewDelete').isDisabled(),true);
+  await page.locator('#pdfPreviewClose').click();
+  await page.locator('#pdfPreviewDialog').waitFor({state:'hidden'});
+  await page.evaluate(async()=>{
+    await window.WishPdfPreview.open({name:'oversized.pdf',size:51*1024*1024,arrayBuffer(){throw new Error('oversized input must not be read');}},{});
+  });
+  await page.waitForFunction(()=>document.getElementById('pdfPreviewStatus').textContent.includes('50MB'));
+  assert.equal(await page.locator('#pdfPreviewExtract').isDisabled(),true);
+  await page.locator('#pdfPreviewClose').click();
+  await page.locator('#pdfPreviewDialog').waitFor({state:'hidden'});
   assert.ok(!failures.length,'Browser JS errors: '+failures.join('; '));
   const after=pdf?crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex'):null;
   if(pdf) assert.equal(after,before,'original PDF must remain unchanged');
-  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',browserErrors:failures},null,2));
+  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',damagedRejected:true,oversizedRejected:true,browserErrors:failures},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error('E2E FAIL:',error.stack||error);server.close();process.exitCode=1;});
