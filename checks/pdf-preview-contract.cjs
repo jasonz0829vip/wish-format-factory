@@ -19,7 +19,7 @@ test('preview is integrated after existing PDF module, offline cached, and offer
  const html=read('index.html'),app=read('app.js'),sw=read('sw.js');
  const pdfPos=html.indexOf('src="./pdf-extra.js"'),previewPos=html.indexOf('src="./pdf-preview.js"'),appPos=html.indexOf('src="./app.js"');
  assert.ok(pdfPos>=0&&previewPos>pdfPos&&appPos>previewPos);
- const ids=['pdfPreviewDialog','pdfPreviewFilename','pdfPreviewPrevious','pdfPreviewNext','pdfPreviewPage','pdfPreviewZoomIn','pdfPreviewZoomOut','pdfPreviewCanvas','pdfPreviewDelete','pdfPreviewExtract','pdfPreviewStatus'];
+ const ids=['pdfPreviewDialog','pdfPreviewFilename','pdfPreviewPrevious','pdfPreviewNext','pdfPreviewPage','pdfPreviewZoomIn','pdfPreviewZoomOut','pdfPreviewCanvas','pdfPreviewDelete','pdfPreviewExtract','pdfPreviewStatus','pdfPreviewTitle','pdfPreviewActionSeparator','pdfPreviewFootnote'];
  for(const id of ids)assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(app,/WishPdfPreview\.open\(f/);
  assert.match(app,/op:'pdf_delete'/);
