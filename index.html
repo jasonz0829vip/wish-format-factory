@@ -5,7 +5,7 @@
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="stylesheet" href="./style.css"><title>许愿格式工厂 · 本地离线转换</title>
 <script defer src="./vendor/jszip.min.js"></script><script defer src="./vendor/pdf-lib.min.js"></script>
-<script defer src="./vendor/heic2any.min.js"></script><script defer src="./vendor/media-bundle.js"></script><script defer src="./vendor/xmind-bundle.js"></script><script defer src="./formats.js"></script><script defer src="./archive-browser.js"></script><script defer src="./planner.js"></script><script defer src="./pdf-extra.js"></script><script defer src="./ocr.js"></script><script defer src="./app.js"></script></head>
+<script defer src="./vendor/heic2any.min.js"></script><script defer src="./vendor/media-bundle.js"></script><script defer src="./vendor/xmind-bundle.js"></script><script defer src="./formats.js"></script><script defer src="./archive-browser.js"></script><script defer src="./planner.js"></script><script defer src="./pdf-extra.js"></script><script defer src="./ocr.js"></script><script defer src="./pdf-preview.js"></script><script defer src="./app.js"></script></head>
 <body>
 <div class="shell">
  <header class="topbar">
@@ -39,5 +39,18 @@
  </main>
  <footer><span>WISH FACTORY / v0.10.1</span><span>成熟转换引擎 · 少量定制</span></footer>
 </div>
+<dialog id="pdfPreviewDialog" class="pdfPreviewDialog" aria-label="PDF 本地预览">
+ <header class="pdfPreviewHeader"><div><strong>PDF 本地预览</strong><span id="pdfPreviewFilename"></span></div><button type="button" id="pdfPreviewClose" aria-label="关闭 PDF 预览">×</button></header>
+ <nav class="pdfPreviewToolbar" aria-label="PDF 页面操作">
+  <button type="button" id="pdfPreviewPrevious">← 上一页</button><span id="pdfPreviewPage" aria-live="polite">正在打开…</span><button type="button" id="pdfPreviewNext">下一页 →</button>
+  <span class="pdfPreviewSeparator" aria-hidden="true"></span>
+  <button type="button" id="pdfPreviewZoomOut" aria-label="缩小 PDF">−</button><span id="pdfPreviewZoomValue">100%</span><button type="button" id="pdfPreviewZoomIn" aria-label="放大 PDF">+</button>
+  <span class="pdfPreviewSeparator" aria-hidden="true"></span>
+  <button type="button" id="pdfPreviewExtract">提取当前页</button><button type="button" id="pdfPreviewDelete" class="pdfPreviewDelete">删除当前页，另存</button>
+ </nav>
+ <div class="pdfPreviewStage"><canvas id="pdfPreviewCanvas" role="img" aria-label="当前 PDF 页面的图像预览"></canvas></div>
+ <p id="pdfPreviewStatus" class="pdfPreviewStatus" role="status" aria-live="polite"></p>
+ <p class="pdfPreviewFootnote">使用现有 PDF.js 在本机显示；删除或提取会生成新文件，不覆盖原 PDF。当前不是原文字编辑器。</p>
+</dialog>
 <dialog id="helpDialog"><form method="dialog"><button class="close" aria-label="关闭">×</button><h2>如何使用</h2><p>1. 选择或拖入文件。2. 输入“转成 PDF”等愿望。3. 点击开始转换，下载结果。</p><p>图片和 PDF 合并通常直接在当前浏览器处理，无需互联网。音频优先尝试设备本地处理。Office 转 PDF 使用本机 Windows 上的 LibreOffice：Windows 完整版无需其他电脑在线；该服务仅允许本机访问，不对局域网或公网直接开放。</p><p>PDF 可在手机离线提取可复制文字并保存为 TXT 或 Markdown；扫描件需要 OCR，当前不会输出空文本冒充成功。</p><p>手机需要完整 Word/Excel/PPT 转换时，可在联网状态下通过 Tailscale 私有 HTTPS 使用自己 Windows 电脑的 LibreOffice 引擎。</p><p>iPhone：请在 Safari 打开 HTTPS 网址，等待“离线资源已就绪”，点底部分享 → 添加到主屏幕。安装后开启飞行模式，可尝试已支持的图片、PDF、XMind 和设备可解码的音频转换。iOS 可能清理长期不用的缓存，需要联网重新打开一次。</p><p>Word、Excel、PPT 转 PDF 依然需要你自己的 Windows 电脑运行 LibreOffice；iPhone 断网时不能完成这些操作。未验收的格式会明确提示，不会伪造结果。</p><p>Windows 完整版新增混合压缩包分类整理：明确选择“文档/图片转 PDF、音视频转 MP3”或“Word/PPT 转 PDF、Excel 转 CSV、图片转 WebP、音视频转 MP3”；无法转换的原件仍会保留并列入报告。</p><button class="primary dialogBtn">明白了</button></form></dialog>
 </body></html>
