@@ -247,7 +247,7 @@ function updatePlan(){
  }else {setStatus(files.length?plan.reason:'等待你许愿…',false);if(!busy){runBtn.disabled=false;byId('runText').textContent='开始转换';}}
 }
 function progress(show,title,detail){byId('progress').hidden=!show;byId('progressTitle').textContent=title||'正在执行';byId('progressRate').textContent=show?'处理中':'';
- byId('progressDetail').textContent=detail||'';byId('progressFill').style.width=show?'62%':'0';}
+ byId('progressDetail').textContent=detail||'';byId('progressFill').classList.toggle('indeterminate',show);byId('progressFill').style.width=show?'34%':'0';}
 async function imageBitmap(file){
  let input=file;
  try{return await createImageBitmap(input);}catch(e){
