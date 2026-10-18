@@ -64,6 +64,13 @@ function showUnpacked(items){
  box.append(list);
 }
 function errorMessage(e){const s=String(e&&e.message||e||'转换失败');return s.length>240?s.slice(0,240)+'…':s;}
+// A new source file must never inherit the previous file's download link or error.
+function clearPreviousResult(){
+ if(lastUrl){URL.revokeObjectURL(lastUrl);lastUrl=null;}
+ extraUrls.forEach(u=>URL.revokeObjectURL(u));
+ extraUrls=[];
+ const box=byId('result');box.hidden=true;box.replaceChildren();
+}
 /* Office 文件预览复用现有 LibreOffice→PDF 转换服务和 PDF.js 阅读器。
  * 只读预览不写回原 Office，不依赖第二套在线编辑器。
  */
@@ -106,6 +113,7 @@ function updateFiles(next) {
  }
  const seen=new Map();for(const f of next)seen.set(f.name+'#'+f.size+'#'+f.lastModified,f);
  files=[...seen.values()].slice(0,20);
+ clearPreviousResult();
  input.value='';const wrap=byId('filesWrap'),list=byId('fileList');list.replaceChildren();
  wrap.hidden=!files.length;byId('fileCount').textContent=files.length+' 个';
  files.forEach((f,i)=>{
@@ -477,9 +485,7 @@ async function doConvert(){
   finally{progress(false);busy=false;runBtn.disabled=false;byId('runText').textContent='开始转换';}
  }
  if(!plan.ok){if(plan.needsChoice){byId('formatChoice').focus();return;}showMessage('还不能开始',plan.reason,true);return;}
- if(lastUrl){URL.revokeObjectURL(lastUrl);lastUrl=null;}
- extraUrls.forEach(u=>URL.revokeObjectURL(u));extraUrls=[];
- byId('result').hidden=true;busy=true;runBtn.disabled=true;byId('runText').textContent='正在转换…';
+ clearPreviousResult();busy=true;runBtn.disabled=true;byId('runText').textContent='正在转换…';
  progress(true,plan.title,plan.detail);
  try{
   let output;
