@@ -31,7 +31,7 @@ async function run(){
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
   const initial=await page.locator('#pdfPreviewPage').textContent();
-  const samplePages=Number((initial.match(/\\/\\s*(\\d+)/)||[])[1]);
+  const samplePages=Number((initial.match(/\/\s*(\d+)/)||[])[1]);
   assert.ok(samplePages>=1,'real PDF sample did not render: '+initial);
   console.log('REAL_PDF_PAGE_LABEL='+initial);
   await page.locator('#pdfPreviewExtract').click();
