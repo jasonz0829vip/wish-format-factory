@@ -119,10 +119,34 @@ async function run(){
   assert.equal(await page.locator('#pdfPreviewExtract').isDisabled(),true);
   await page.locator('#pdfPreviewClose').click();
   await page.locator('#pdfPreviewDialog').waitFor({state:'hidden'});
+  let offlineMobilePreview=false;
+  if(process.env.QA_MOBILE==='1'){
+    // Validate the actual Service Worker offline path, not just the cache manifest.
+    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:30000});
+    const cacheReady=await page.evaluate(async()=>{
+      return !!(await caches.match(new URL('./vendor/pdf.min.mjs',document.baseURI))) &&
+             !!(await caches.match(new URL('./vendor/pdf.worker.min.mjs',document.baseURI))) &&
+             !!(await caches.match(new URL('./pdf-preview.js',document.baseURI)));
+    });
+    assert.ok(cacheReady,'PDF offline resources not cached');
+    await page.context().setOffline(true);
+    await page.reload({waitUntil:'domcontentloaded',timeout:25000});
+    await page.locator('#fileInput').setInputFiles({name:'offline-three-pages.pdf',mimeType:'application/pdf',buffer:crafted});
+    await page.locator('.pdfPreviewFileButton').click();
+    await page.waitForFunction(()=>{
+      const dialog=document.getElementById('pdfPreviewDialog');
+      return dialog.open && document.getElementById('pdfPreviewPage').textContent.includes('/ 3 ') &&
+             document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器');
+    },null,{timeout:30000});
+    await page.locator('#pdfPreviewExtract').click();
+    await page.waitForFunction(()=>!!document.querySelector('#result a.downloadLink'),null,{timeout:20000});
+    offlineMobilePreview=true;
+  }
   assert.ok(!failures.length,'Browser JS errors: '+failures.join('; '));
   const after=pdf?crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex'):null;
   if(pdf) assert.equal(after,before,'original PDF must remain unchanged');
-  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',damagedRejected:true,oversizedRejected:true,browserErrors:failures},null,2));
+  console.log(JSON.stringify({status:'PASS',realSamplePages:samplePages,extractedPages:extracted.pages,originalPages:total,editedPages:details.pages,download:details.name,bytes:details.bytes,originalUnchanged:pdf?(before===after):'generated in browser',damagedRejected:true,oversizedRejected:true,offlineMobilePreview,browserErrors:failures},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error('E2E FAIL:',error.stack||error);server.close();process.exitCode=1;});
