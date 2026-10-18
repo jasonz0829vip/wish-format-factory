@@ -45,12 +45,13 @@ async function run(){
       const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
       const toolbar=document.querySelector('.pdfPreviewToolbar');
       const footnote=document.getElementById('pdfPreviewFootnote').getBoundingClientRect();
-      return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-footnote.bottom)};
+      return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-footnote.bottom),minTapHeight:Math.min(...Array.from(toolbar.querySelectorAll('button')).filter(b=>!b.hidden).map(b=>b.getBoundingClientRect().height)),closeHeight:close.height};
     });
     assert.ok(layout.modalRight<=layout.viewport+2,'PDF modal exceeds viewport');
     assert.ok(layout.closeRight<=layout.viewport+2,'PDF close button off-screen');
     assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'PDF toolbar overflows horizontally: '+JSON.stringify(layout));
     assert.ok(layout.unusedBottom<40,'PDF mobile preview wastes bottom space: '+JSON.stringify(layout));
+    assert.ok(layout.minTapHeight>=38&&layout.closeHeight>=38,'PDF mobile tap targets too small: '+JSON.stringify(layout));
   }
   assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'PDF 页面预览');
   assert.equal(await page.locator('#pdfPreviewExtract').isVisible(),true);

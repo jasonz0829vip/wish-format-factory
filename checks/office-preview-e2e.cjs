@@ -71,12 +71,13 @@ async function main(){
         const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
         const toolbar=document.querySelector('.pdfPreviewToolbar');
         const status=document.getElementById('pdfPreviewStatus').getBoundingClientRect();
-        return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-status.bottom)};
+        return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth,unusedBottom:Math.round(d.bottom-status.bottom),minTapHeight:Math.min(...Array.from(toolbar.querySelectorAll('button')).filter(b=>!b.hidden).map(b=>b.getBoundingClientRect().height)),closeHeight:close.height};
       });
       assert.ok(layout.modalRight<=layout.viewport+2,'Office modal exceeds mobile screen');
       assert.ok(layout.closeRight<=layout.viewport+2,'Office close button off-screen');
       assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'Office toolbar horizontal overflow: '+JSON.stringify(layout));
       assert.ok(layout.unusedBottom<40,'Office mobile preview wastes bottom space: '+JSON.stringify(layout));
+      assert.ok(layout.minTapHeight>=38&&layout.closeHeight>=38,'Office mobile tap targets too small: '+JSON.stringify(layout));
     }
     assert.equal(await page.locator('#pdfPreviewFilename').textContent(),'合同预览.'+ext);
     const onPage=await page.locator('#pdfPreviewPage').textContent();

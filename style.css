@@ -63,3 +63,9 @@
 @supports (height:95dvh){
  @media(max-width:650px){.pdfPreviewDialog{height:95dvh;max-height:95dvh}}
 }
+
+/* Touch-friendly PDF controls, no extra JS or styling dependency. */
+@media(max-width:650px){
+ .pdfPreviewToolbar button{min-height:40px;touch-action:manipulation}
+ .pdfPreviewHeader button{min-height:40px;min-width:40px;touch-action:manipulation}
+}
