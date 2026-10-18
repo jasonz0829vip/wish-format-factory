@@ -53,3 +53,13 @@
 .fill.indeterminate{width:34%!important;transition:none;animation:wish-busy 1.45s ease-in-out infinite}
 @keyframes wish-busy{0%{transform:translateX(-105%)}50%{transform:translateX(108%)}100%{transform:translateX(310%)}}
 @media(prefers-reduced-motion:reduce){.fill.indeterminate{animation:none;width:100%!important;opacity:.55}}
+
+/* The preview modal must give remaining height to the page itself.
+   Avoid static pixel subtraction which left an empty bottom on phones. */
+.pdfPreviewDialog[open]{display:flex;flex-direction:column}
+.pdfPreviewHeader,.pdfPreviewToolbar{flex-shrink:0}
+.pdfPreviewDialog .pdfPreviewStage{flex:1;min-height:0;height:auto}
+.pdfPreviewDialog .pdfPreviewStatus,.pdfPreviewDialog .pdfPreviewFootnote{flex-shrink:0}
+@supports (height:95dvh){
+ @media(max-width:650px){.pdfPreviewDialog{height:95dvh;max-height:95dvh}}
+}
