@@ -70,3 +70,19 @@ jobs:
             office-preview-ci.png
           if-no-files-found: ignore
           retention-days: 7
+
+  pdf-draw-text-probe:
+    name: Experimental PDF existing-Chinese-text replacement (LibreOffice Draw)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out experimental source without production deployment
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install existing LibreOffice Draw and system UNO tooling
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libreoffice-draw python3-uno python3-reportlab fonts-arphic-gbsn00lp poppler-utils
+      - name: Edit real two-page Chinese PDF then verify text and reject unsafe cases
+        run: /usr/bin/python3 checks/pdf-text-probe-qa.py
