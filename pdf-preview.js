@@ -36,7 +36,7 @@
   }
 
   async function dispose() {
-    ++renderId;
+    const disposalToken = ++renderId;
     const running = renderTask;
     renderTask = null;
     if (running) {
@@ -47,10 +47,14 @@
     documentRef = null;
     if (oldLoading) { try { await oldLoading.destroy(); } catch (_) { /* already closed */ } }
     if (oldDocument) { try { await oldDocument.destroy(); } catch (_) { /* already closed */ } }
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.width = 1;
-    canvas.height = 1;
+    // A newer preview may already have opened while an old render was shutting down.
+    // Never clear the newer session's canvas after a stale asynchronous cleanup.
+    if (disposalToken === renderId) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 1;
+      canvas.height = 1;
+    }
   }
 
   async function paint(target) {
@@ -156,6 +160,9 @@
   extractPage.addEventListener('click', () => void act('extract'));
   el('pdfPreviewClose').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
+    // HTMLDialogElement fires "close" asynchronously; if another PDF was opened
+    // immediately, this event belongs to the previous session.
+    if (dialog.open) return;
     ++openingId;
     callbacks = {};
     currentFile = null;
