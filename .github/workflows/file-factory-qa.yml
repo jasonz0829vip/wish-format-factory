@@ -62,5 +62,6 @@ jobs:
           path: |
             pdf-preview-ci.png
             image-editor-ci.png
+            image-editor-mobile-ci.png
           if-no-files-found: ignore
           retention-days: 7
