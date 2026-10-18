@@ -37,10 +37,13 @@ async function main(){
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  let browser;
  try{
-  const options={headless:true,args:['--no-sandbox']};
-  if(process.env.CHROME_PATH)options.executablePath=process.env.CHROME_PATH;
-  browser=await playwright.chromium.launch(options);
-  const page=await browser.newPage({viewport:process.env.QA_MOBILE==='1'?{width:390,height:844}:{width:1200,height:830},acceptDownloads:true});
+  const webkit=process.env.QA_ENGINE==='webkit';
+  const options=webkit?{headless:true}:{headless:true,args:['--no-sandbox']};
+  if(!webkit&&process.env.CHROME_PATH)options.executablePath=process.env.CHROME_PATH;
+  browser=await (webkit?playwright.webkit:playwright.chromium).launch(options);
+  const phone=webkit&&process.env.QA_MOBILE==='1'?playwright.devices['iPhone 13']:null;
+  const context=await browser.newContext(phone?{...phone,acceptDownloads:true}:{acceptDownloads:true,viewport:process.env.QA_MOBILE==='1'?{width:390,height:844}:{width:1200,height:830}});
+  const page=await context.newPage();
   const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
   pdfFixture=Buffer.from(await page.evaluate(async()=>{

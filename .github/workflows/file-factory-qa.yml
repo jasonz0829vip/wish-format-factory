@@ -129,3 +129,46 @@ jobs:
             windows-office-preview.png
           if-no-files-found: ignore
           retention-days: 7
+
+  webkit-phone-smoke:
+    name: WebKit iPhone-size simulator (not real iOS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact feature commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install existing project packages
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install test-only WebKit automation controller
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.55.0
+      - name: Install browser and system libraries only on ephemeral CI runner
+        run: npx playwright-core install --with-deps webkit
+      - name: WebKit phone PDF reading and editing, including offline PWA
+        run: node checks/pdf-preview-e2e.cjs
+        env:
+          QA_ENGINE: webkit
+          QA_MOBILE: '1'
+          PREVIEW_SCREENSHOT: webkit-phone-pdf.png
+      - name: WebKit phone Office read-only preview and offline refusal
+        run: node checks/office-preview-e2e.cjs
+        env:
+          QA_ENGINE: webkit
+          QA_MOBILE: '1'
+          OFFICE_PREVIEW_SCREENSHOT: webkit-phone-office.png
+      - name: Retain simulated iPhone WebKit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-webkit-phone-sim
+          path: |
+            webkit-phone-pdf.png
+            webkit-phone-office.png
+          if-no-files-found: ignore
+          retention-days: 7
