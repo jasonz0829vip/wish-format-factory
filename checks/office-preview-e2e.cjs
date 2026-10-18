@@ -129,8 +129,21 @@ async function main(){
   await page.waitForFunction(()=>document.getElementById('result')?.textContent.includes('返回的不是 PDF'),null,{timeout:20000});
   assert.match(await page.locator('#result').textContent(),/返回的不是 PDF/);
   assert.equal(await page.locator('#pdfPreviewDialog').getAttribute('open'),null);
+  let offlineMobileRefusal=false;
+  if(process.env.QA_MOBILE==='1'){
+    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:30000});
+    assert.ok(await page.evaluate(async()=>!!(await caches.match(new URL('./app.js',document.baseURI)))));
+    await page.context().setOffline(true);
+    await page.reload({waitUntil:'domcontentloaded',timeout:25000});
+    await page.locator('#fileInput').setInputFiles({name:'offline-office.docx',mimeType:'application/octet-stream',buffer:Buffer.from('document')});
+    await page.locator('.officePreviewFileButton').click();
+    await page.waitForFunction(()=>document.getElementById('result')?.textContent.includes('Windows 本地转换服务不可访问'),null,{timeout:20000});
+    assert.equal(await page.locator('#pdfPreviewDialog').getAttribute('open'),null);
+    offlineMobileRefusal=true;
+  }
   assert.deepEqual(pageErrors,[]);
-  console.log(JSON.stringify({status:'PASS',oversizeRejected:true,inflightFileSwitchBlocked:true,engines:'mocked PDF conversion route + genuine PDF.js renderer',officeTypes:extList,readOnly:true,sourceUnchanged:true,macroDenied:true,invalidBackendResponseRejected:true,apiCalls:callCount,browserErrors:pageErrors.length},null,2));
+  console.log(JSON.stringify({status:'PASS',oversizeRejected:true,inflightFileSwitchBlocked:true,engines:'mocked PDF conversion route + genuine PDF.js renderer',officeTypes:extList,readOnly:true,sourceUnchanged:true,macroDenied:true,invalidBackendResponseRejected:true,offlineMobileRefusal,apiCalls:callCount,browserErrors:pageErrors.length},null,2));
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(e=>{console.error('OFFICE PREVIEW E2E FAIL:',e.stack||e);process.exitCode=1;});
