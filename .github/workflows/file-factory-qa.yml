@@ -23,6 +23,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Chinese font only for GitHub screenshot accuracy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
       - name: Node.js 22
         uses: actions/setup-node@v4
         with:
