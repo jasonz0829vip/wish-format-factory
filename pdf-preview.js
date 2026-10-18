@@ -11,6 +11,8 @@
   const zoomOut = el('pdfPreviewZoomOut');
   const zoomIn = el('pdfPreviewZoomIn');
   const deletePage = el('pdfPreviewDelete');
+  const actionSeparator = el('pdfPreviewActionSeparator');
+  const footnote = el('pdfPreviewFootnote');
   const extractPage = el('pdfPreviewExtract');
   const label = el('pdfPreviewPage');
   const zoomLabel = el('pdfPreviewZoomValue');
@@ -104,7 +106,15 @@
     pageNo = 1;
     zoom = 1;
     actionBusy = false;
-    el('pdfPreviewFilename').textContent = file.name;
+    const officeMode = !!handlers.readOnlyNote;
+    const title = officeMode ? '文档只读预览' : 'PDF 页面预览';
+    el('pdfPreviewTitle').textContent = title;
+    el('pdfPreviewFilename').textContent = handlers.sourceName || file.name;
+    dialog.setAttribute('aria-label', title);
+    extractPage.hidden = officeMode;
+    deletePage.hidden = officeMode;
+    actionSeparator.hidden = officeMode;
+    footnote.hidden = officeMode;
     if (!dialog.open) dialog.showModal();
     refresh();
     announce('正在读取 PDF…');
