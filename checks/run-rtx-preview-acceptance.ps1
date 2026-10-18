@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $lab = Join-Path $env:TEMP ('wish-pdf-preview-qa-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 $live = 'C:\Users\Admin\MobileTools\wish-factory'
-$sample = Join-Path $live 'v02-pdf-six.pdf'
+$sample = Join-Path (Join-Path $live 'NativeFormatTests') 'bordered-table.pdf'
 $archive = Join-Path $lab 'feature.zip'
 $source = 'https://codeload.github.com/jasonz0829vip/wish-format-factory/zip/refs/heads/feat/pdf-visual-preview-20261018'
 New-Item -ItemType Directory -Force -Path $lab | Out-Null
