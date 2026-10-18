@@ -27,7 +27,7 @@ async function run(){
   const failures=[];page.on('pageerror',e=>failures.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
   await page.locator('#fileInput').setInputFiles(pdf);
-  await page.getByRole('button',{name:/预览.*选页/}).click();
+  await page.getByRole('button',{name:/预览.*(选页|选择页面)/}).click();
   await page.locator('#pdfPreviewCanvas').waitFor({state:'visible',timeout:25000});
   await page.waitForFunction(()=>document.getElementById('pdfPreviewCanvas').width>100&&document.getElementById('pdfPreviewStatus').textContent.includes('本机浏览器'),{timeout:30000});
   const initial=await page.locator('#pdfPreviewPage').textContent();
