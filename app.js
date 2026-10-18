@@ -64,6 +64,34 @@ function showUnpacked(items){
  box.append(list);
 }
 function errorMessage(e){const s=String(e&&e.message||e||'转换失败');return s.length>240?s.slice(0,240)+'…':s;}
+/* Office 文件预览复用现有 LibreOffice→PDF 转换服务和 PDF.js 阅读器。
+ * 只读预览不写回原 Office，不依赖第二套在线编辑器。
+ */
+async function previewOfficeFile(file,button){
+ if(!file||!officeExt.has(ext(file))||!window.WishFormats.canConvert(file.name,'pdf')){
+  throw new Error('此 Office 格式尚未通过安全预览检查');
+ }
+ if(!window.WishPdfPreview)throw new Error('本地 PDF 阅读组件没有加载');
+ if(file.size>25*1024*1024)throw new Error('Office 预览目前限 25MB，请使用原有转换功能处理大文件');
+ const oldLabel=button.textContent;
+ button.disabled=true;
+ button.textContent='正在生成预览…';
+ try{
+  const rendered=await convertByWindows({target:'pdf',source:'office',op:'office_convert'},[file]);
+  if(!rendered||!rendered.blob||rendered.blob.size<8)
+   throw new Error('LibreOffice 未返回有效预览文件');
+  const header=new TextDecoder('ascii').decode(await rendered.blob.slice(0,5).arrayBuffer());
+  if(header!=='%PDF-')throw new Error('预览生成失败：Windows 服务返回的不是 PDF');
+  const preview=new File([rendered.blob],basename(file)+'-只读预览.pdf',{type:'application/pdf'});
+  await window.WishPdfPreview.open(preview,{readOnlyNote:'仅供浏览：由你自己的 Windows LibreOffice 生成 PDF 预览。不能在此修改原 '+ext(file).toUpperCase()+' 文件。'});
+ }catch(e){
+  if(e&&e.pair)showMessage('Office 预览需要配对','请先在 Windows 电脑打开 http://127.0.0.1:8790/api/pair，完成本地转换服务配对，再重试预览。',true);
+  else showMessage('Office 预览未完成',errorMessage(e),true);
+ }finally{
+  button.textContent=oldLabel;
+  button.disabled=false;
+ }
+}
 function updateFiles(next) {
  const seen=new Map();for(const f of next)seen.set(f.name+'#'+f.size+'#'+f.lastModified,f);
  files=[...seen.values()].slice(0,20);
@@ -91,6 +119,12 @@ function updateFiles(next) {
      }
     });
    };
+   row.append(name,size,preview,x);
+  }else if(officeExt.has(ext(f))&&window.WishFormats.canConvert(f.name,'pdf')){
+   const preview=document.createElement('button');preview.type='button';
+   preview.className='officePreviewFileButton';preview.textContent='预览文档';
+   preview.setAttribute('aria-label','只读预览 '+f.name);
+   preview.onclick=()=>{void previewOfficeFile(f,preview);};
    row.append(name,size,preview,x);
   }else if(['png','jpg','jpeg','webp','bmp','avif'].includes(ext(f))){
    const edit=document.createElement('button');edit.type='button';
