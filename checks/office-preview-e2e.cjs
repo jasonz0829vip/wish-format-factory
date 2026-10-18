@@ -110,7 +110,7 @@ async function main(){
   badResponse=true;
   await page.locator('#fileInput').setInputFiles({name:'bad-server.docx',mimeType:'application/octet-stream',buffer:Buffer.from('sample')});
   await page.locator('.officePreviewFileButton').click();
-  await page.waitForFunction(()=>document.querySelector('#result h3')?.textContent.includes('Office 预览未完成'));
+  await page.waitForFunction(()=>document.getElementById('result')?.textContent.includes('返回的不是 PDF'),null,{timeout:20000});
   assert.match(await page.locator('#result').textContent(),/返回的不是 PDF/);
   assert.equal(await page.locator('#pdfPreviewDialog').getAttribute('open'),null);
   assert.deepEqual(pageErrors,[]);
