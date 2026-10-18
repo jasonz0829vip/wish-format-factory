@@ -93,7 +93,7 @@ async function previewOfficeFile(file,button){
   const header=new TextDecoder('ascii').decode(await rendered.blob.slice(0,5).arrayBuffer());
   if(header!=='%PDF-')throw new Error('预览生成失败：Windows 服务返回的不是 PDF');
   const preview=new File([rendered.blob],basename(file)+'-只读预览.pdf',{type:'application/pdf'});
-  await window.WishPdfPreview.open(preview,{readOnlyNote:'仅供浏览：由你自己的 Windows LibreOffice 生成 PDF 预览。不能在此修改原 '+ext(file).toUpperCase()+' 文件。'});
+  await window.WishPdfPreview.open(preview,{sourceName:file.name,readOnlyNote:'仅供浏览，不能在此修改原 '+ext(file).toUpperCase()+' 文件。'});
  }catch(e){
   if(e&&e.pair)showMessage('Office 预览需要配对','请先在 Windows 电脑打开 http://127.0.0.1:8790/api/pair，完成本地转换服务配对，再重试预览。',true);
   else showMessage('Office 预览未完成',errorMessage(e),true);
