@@ -40,7 +40,7 @@ async function main(){
   const options={headless:true,args:['--no-sandbox']};
   if(process.env.CHROME_PATH)options.executablePath=process.env.CHROME_PATH;
   browser=await playwright.chromium.launch(options);
-  const page=await browser.newPage({viewport:{width:1200,height:830},acceptDownloads:true});
+  const page=await browser.newPage({viewport:process.env.QA_MOBILE==='1'?{width:390,height:844}:{width:1200,height:830},acceptDownloads:true});
   const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
   pdfFixture=Buffer.from(await page.evaluate(async()=>{
@@ -65,6 +65,17 @@ async function main(){
     assert.equal(await page.locator('#pdfPreviewActionSeparator').isHidden(),true);
     assert.equal(await page.locator('#pdfPreviewFootnote').isHidden(),true);
     assert.equal(await page.locator('#pdfPreviewTitle').textContent(),'文档只读预览');
+    if(process.env.QA_MOBILE==='1'){
+      const layout=await page.evaluate(()=>{
+        const d=document.getElementById('pdfPreviewDialog').getBoundingClientRect();
+        const close=document.getElementById('pdfPreviewClose').getBoundingClientRect();
+        const toolbar=document.querySelector('.pdfPreviewToolbar');
+        return {viewport:innerWidth,modalRight:d.right,closeRight:close.right,toolbarWidth:toolbar.scrollWidth,toolbarClient:toolbar.clientWidth};
+      });
+      assert.ok(layout.modalRight<=layout.viewport+2,'Office modal exceeds mobile screen');
+      assert.ok(layout.closeRight<=layout.viewport+2,'Office close button off-screen');
+      assert.ok(layout.toolbarWidth<=layout.toolbarClient+2,'Office toolbar horizontal overflow: '+JSON.stringify(layout));
+    }
     assert.equal(await page.locator('#pdfPreviewFilename').textContent(),'合同预览.'+ext);
     const onPage=await page.locator('#pdfPreviewPage').textContent();
     assert.match(onPage,/1\s*\/\s*1/);
